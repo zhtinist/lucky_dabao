@@ -1,4 +1,4 @@
-name: 加密并部署到 GitHub Pages
+name: 部署到 GitHub Pages
 
 on:
   push:
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  encrypt-and-deploy:
+  deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -23,70 +23,6 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-
-    - name: Install dependencies
-      run: npm install crypto-js
-
-    - name: Encrypt files and generate site
-      env:
-        SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
-      run: |
-        node << 'SCRIPT'
-        const CryptoJS = require('crypto-js');
-        const fs = require('fs');
-        const path = require('path');
-
-        const password = process.env.SITE_PASSWORD;
-        const sourceDir = './src';
-        const outputDir = './encrypted';
-
-        // 递归加密所有文件，保留目录结构
-        function encryptDir(dir, baseDir) {
-          fs.readdirSync(dir).forEach(name => {
-            const full = path.join(dir, name);
-            const rel  = path.relative(baseDir, full);
-            if (fs.statSync(full).isDirectory()) {
-              encryptDir(full, baseDir);
-            } else {
-              const content   = fs.readFileSync(full, 'utf8');
-              const encrypted = CryptoJS.AES.encrypt(content, password).toString();
-              const dest      = path.join(outputDir, rel + '.enc');
-              fs.mkdirSync(path.dirname(dest), { recursive: true });
-              fs.writeFileSync(dest, encrypted);
-              console.log('encrypted:', rel);
-            }
-          });
-        }
-
-        if (fs.existsSync(sourceDir)) {
-          fs.mkdirSync(outputDir, { recursive: true });
-          encryptDir(sourceDir, sourceDir);
-        }
-
-        // 构建文件树 JSON（保留目录层级）
-        function buildTree(dir, baseDir) {
-          const result = [];
-          fs.readdirSync(dir).sort().forEach(name => {
-            const full = path.join(dir, name);
-            const rel  = path.relative(baseDir, full);
-            if (fs.statSync(full).isDirectory()) {
-              result.push({ type: 'dir', name, children: buildTree(full, baseDir) });
-            } else {
-              result.push({ type: 'file', name, path: rel + '.enc' });
-            }
-          });
-          return result;
-        }
-
-        const tree = fs.existsSync(sourceDir) ? buildTree(sourceDir, sourceDir) : [];
-        fs.writeFileSync('file-tree.json', JSON.stringify(tree, null, 2));
-        console.log('file-tree.json written');
-        SCRIPT
 
     - name: Generate index.html
       run: |
@@ -100,7 +36,6 @@ jobs:
           <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
           <style>
             *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
             body {
               font-family: 'Segoe UI', system-ui, sans-serif;
               background: #0f0f1a;
@@ -110,8 +45,6 @@ jobs:
               align-items: center;
               justify-content: center;
             }
-
-            /* ── Login ── */
             #login {
               background: #1a1a2e;
               border: 1px solid #2a2a4a;
@@ -140,17 +73,13 @@ jobs:
             }
             #login button:hover { opacity: .85; }
             #login-err { color: #f77; font-size: .85rem; margin-top: .8rem; min-height: 1.2em; }
-
-            /* ── App shell ── */
             #app {
               display: none;
               width: 100vw; height: 100vh;
               flex-direction: row;
             }
-
-            /* ── Sidebar ── */
             #sidebar {
-              width: 280px; min-width: 220px;
+              width: 260px; min-width: 200px;
               background: #1a1a2e;
               border-right: 1px solid #2a2a4a;
               display: flex; flex-direction: column;
@@ -159,61 +88,44 @@ jobs:
             #sidebar-header {
               padding: 1.2rem 1rem;
               border-bottom: 1px solid #2a2a4a;
-              font-weight: 600; font-size: .95rem;
+              font-weight: 600; font-size: .9rem;
               color: #aaa; letter-spacing: .05em;
             }
-            #tree {
-              flex: 1; overflow-y: auto; padding: .5rem 0;
-            }
+            #tree { flex: 1; overflow-y: auto; padding: .5rem 0; }
             #tree::-webkit-scrollbar { width: 4px; }
             #tree::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-
-            /* tree nodes */
             .tree-item {
               display: flex; align-items: center; gap: 6px;
-              padding: 5px 12px; cursor: pointer;
+              padding: 6px 12px; cursor: pointer;
               font-size: .88rem; user-select: none;
               transition: background .15s;
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             }
             .tree-item:hover { background: #252540; }
             .tree-item.active { background: #2e2e55; color: #a89cf7; }
-            .tree-item .icon { flex-shrink: 0; font-size: 1rem; }
+            .tree-item .icon { flex-shrink: 0; }
             .tree-item .label { overflow: hidden; text-overflow: ellipsis; }
-
             .tree-folder > .tree-children { display: none; }
             .tree-folder.open > .tree-children { display: block; }
-            .tree-folder > .tree-item .arrow {
-              font-size: .7rem; color: #666; transition: transform .2s; flex-shrink: 0;
-            }
+            .tree-folder > .tree-item .arrow { font-size: .7rem; color: #666; transition: transform .2s; flex-shrink: 0; }
             .tree-folder.open > .tree-item .arrow { transform: rotate(90deg); }
-
-            /* indent levels */
             .tree-children { padding-left: 16px; }
-
-            /* ── Main content ── */
-            #main {
-              flex: 1; display: flex; flex-direction: column; overflow: hidden;
-            }
+            #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
             #topbar {
               padding: .9rem 1.4rem;
               border-bottom: 1px solid #2a2a4a;
               font-size: .85rem; color: #666;
               background: #16162a;
             }
-            #viewer {
-              flex: 1; overflow: auto; padding: 1.5rem;
-            }
+            #viewer { flex: 1; overflow: auto; padding: 1.5rem; }
             #viewer::-webkit-scrollbar { width: 6px; }
             #viewer::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-
             #placeholder {
               height: 100%; display: flex; flex-direction: column;
               align-items: center; justify-content: center;
               color: #444; gap: .6rem;
             }
             #placeholder .big { font-size: 3rem; }
-
             #file-content {
               display: none;
               background: #1a1a2e; border: 1px solid #2a2a4a;
@@ -229,7 +141,7 @@ jobs:
               width: 100%; height: 70vh; border: none;
               border-radius: 6px; background: #fff;
             }
-
+            #loading { display: none; text-align: center; padding: 3rem; color: #666; }
             .md-body { line-height: 1.8; color: #ccc; }
             .md-body h1 { font-size: 1.5rem; color: #fff; margin: 1rem 0 .5rem; }
             .md-body h2 { font-size: 1.2rem; color: #e0e0e0; margin: 1rem 0 .4rem; }
@@ -238,15 +150,9 @@ jobs:
             .md-body blockquote { border-left: 3px solid #7c6af7; padding-left: .8rem; color: #888; margin: .5rem 0; }
             .md-body hr  { border: none; border-top: 1px solid #2a2a4a; margin: 1rem 0; }
             .md-body strong { color: #fff; }
-
-            #loading {
-              display: none; text-align: center; padding: 3rem; color: #666;
-            }
           </style>
         </head>
         <body>
-
-        <!-- Login -->
         <div id="login">
           <h1>🔐 加密文件库</h1>
           <p>请输入密码以访问内容</p>
@@ -254,105 +160,76 @@ jobs:
           <button onclick="doLogin()">进入</button>
           <div id="login-err"></div>
         </div>
-
-        <!-- App -->
         <div id="app">
           <div id="sidebar">
             <div id="sidebar-header">📁 文件目录</div>
             <div id="tree"></div>
           </div>
           <div id="main">
-            <div id="topbar" id="breadcrumb">选择左侧文件查看内容</div>
+            <div id="topbar">选择左侧文件查看内容</div>
             <div id="viewer">
-              <div id="placeholder">
-                <div class="big">🗂️</div>
-                <div>从左侧选择一个文件</div>
-              </div>
+              <div id="placeholder"><div class="big">🗂️</div><div>从左侧选择一个文件</div></div>
               <div id="loading">解密中...</div>
-              <div id="file-content">
-                <h2 id="file-title"></h2>
-                <div id="file-body"></div>
-              </div>
+              <div id="file-content"><h2 id="file-title"></h2><div id="file-body"></div></div>
             </div>
           </div>
         </div>
-
         <script>
           let PASSWORD = '';
-
-          // ── Login ──────────────────────────────────────────
-          document.getElementById('pwd').addEventListener('keydown', e => {
-            if (e.key === 'Enter') doLogin();
-          });
+          document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
           async function doLogin() {
             const pwd = document.getElementById('pwd').value.trim();
             const err = document.getElementById('login-err');
             if (!pwd) { err.textContent = '请输入密码'; return; }
-
-            // verify with first .enc file
             try {
-              const res  = await fetch('./file-tree.json');
-              const tree = await res.json();
+              const tree = await (await fetch('./file-tree.json')).json();
               const first = findFirstFile(tree);
               if (!first) { bootApp(pwd); return; }
-
-              const r2  = await fetch('./encrypted/' + first);
-              const enc = await r2.text();
+              const enc = await (await fetch('./encrypted/' + first)).text();
               const dec = CryptoJS.AES.decrypt(enc, pwd).toString(CryptoJS.enc.Utf8);
               if (dec) { err.textContent = ''; bootApp(pwd); }
               else     { err.textContent = '密码错误，请重试'; }
-            } catch(e) {
-              err.textContent = '验证失败，请重试';
-            }
+            } catch(e) { err.textContent = '验证失败，请重试'; }
           }
 
           function findFirstFile(nodes) {
             for (const n of nodes) {
               if (n.type === 'file') return n.path;
-              if (n.type === 'dir') {
-                const f = findFirstFile(n.children);
-                if (f) return f;
-              }
+              if (n.type === 'dir') { const f = findFirstFile(n.children); if (f) return f; }
             }
             return null;
           }
 
-          // ── Boot ───────────────────────────────────────────
           async function bootApp(pwd) {
             PASSWORD = pwd;
             document.getElementById('login').style.display = 'none';
             document.getElementById('app').style.display   = 'flex';
-
-            const res  = await fetch('./file-tree.json');
-            const tree = await res.json();
+            const tree = await (await fetch('./file-tree.json')).json();
             renderTree(tree, document.getElementById('tree'));
           }
 
-          // ── Tree rendering ─────────────────────────────────
           function renderTree(nodes, container) {
             nodes.forEach(node => {
               if (node.type === 'dir') {
                 const folder = document.createElement('div');
                 folder.className = 'tree-folder';
-
                 const row = document.createElement('div');
                 row.className = 'tree-item';
                 row.innerHTML = `<span class="arrow">▶</span><span class="icon">📂</span><span class="label">${node.name}</span>`;
                 row.onclick = () => folder.classList.toggle('open');
-
                 const children = document.createElement('div');
                 children.className = 'tree-children';
                 renderTree(node.children, children);
-
                 folder.appendChild(row);
                 folder.appendChild(children);
                 container.appendChild(folder);
               } else {
                 const item = document.createElement('div');
                 item.className = 'tree-item';
-                const icon = getIcon(node.name);
-                item.innerHTML = `<span class="icon">${icon}</span><span class="label" title="${node.name}">${node.name}</span>`;
+                item.innerHTML = `<span class="icon">${getIcon(node.name)}</span><span class="label" title="${node.name}">${node.name}</span>`;
+                item.dataset.path = node.path;
+                item.dataset.name = node.name;
                 item.onclick = () => openFile(node.path, node.name, item);
                 container.appendChild(item);
               }
@@ -361,43 +238,30 @@ jobs:
 
           function getIcon(name) {
             const ext = name.split('.').pop().toLowerCase();
-            const map = { html:'🌐', htm:'🌐', md:'📝', txt:'📄', js:'📜', ts:'📜',
-                          css:'🎨', json:'📋', png:'🖼️', jpg:'🖼️', jpeg:'🖼️',
-                          gif:'🖼️', svg:'🖼️', pdf:'📕', zip:'📦', mp4:'🎬', mp3:'🎵' };
-            return map[ext] || '📄';
+            return { html:'🌐', htm:'🌐', md:'📝', txt:'📄', js:'📜', css:'🎨', json:'📋',
+                     png:'🖼️', jpg:'🖼️', jpeg:'🖼️', gif:'🖼️', svg:'🖼️', pdf:'📕' }[ext] || '📄';
           }
 
-          // ── File viewer ────────────────────────────────────
           let activeItem = null;
-
           async function openFile(encPath, name, itemEl) {
             if (activeItem) activeItem.classList.remove('active');
             activeItem = itemEl;
             itemEl.classList.add('active');
-
             document.getElementById('topbar').textContent = name;
             document.getElementById('placeholder').style.display  = 'none';
             document.getElementById('file-content').style.display = 'none';
             document.getElementById('loading').style.display      = 'block';
-
             try {
-              const res  = await fetch('./encrypted/' + encPath);
-              const enc  = await res.text();
-              const dec  = CryptoJS.AES.decrypt(enc, PASSWORD).toString(CryptoJS.enc.Utf8);
-
+              const enc = await (await fetch('./encrypted/' + encPath)).text();
+              const dec = CryptoJS.AES.decrypt(enc, PASSWORD).toString(CryptoJS.enc.Utf8);
               document.getElementById('loading').style.display      = 'none';
               document.getElementById('file-content').style.display = 'block';
               document.getElementById('file-title').textContent     = name;
-
               const body = document.getElementById('file-body');
               const ext  = name.split('.').pop().toLowerCase();
-
               if (['html','htm'].includes(ext)) {
-                const blob = new Blob([dec], { type: 'text/html' });
-                const url  = URL.createObjectURL(blob);
+                const url = URL.createObjectURL(new Blob([dec], { type: 'text/html' }));
                 body.innerHTML = `<iframe src="${url}"></iframe>`;
-              } else if (['png','jpg','jpeg','gif','svg'].includes(ext)) {
-                body.innerHTML = `<img src="data:image/${ext};base64,${btoa(dec)}" style="max-width:100%;border-radius:6px;">`;
               } else if (ext === 'md') {
                 body.innerHTML = renderMd(dec);
               } else {
@@ -414,39 +278,24 @@ jobs:
             return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
           }
 
-          // 渲染简单 Markdown（粗体、标题、列表、分割线、换行）
           function renderMd(src) {
-            let html = escHtml(src);
-            // 标题
-            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-            html = html.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
-            html = html.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
-            // 粗体 / 斜体
-            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/\*(.+?)\*/g,     '<em>$1</em>');
-            // 引用
-            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-            // 无序列表
-            html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-            // 分割线
-            html = html.replace(/^---$/gm, '<hr>');
-            // 换行
-            html = html.replace(/\n/g, '<br>');
-            return `<div class="md-body">${html}</div>`;
+            let h = escHtml(src);
+            h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            h = h.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
+            h = h.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
+            h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            h = h.replace(/\*(.+?)\*/g,     '<em>$1</em>');
+            h = h.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+            h = h.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+            h = h.replace(/^---$/gm, '<hr>');
+            h = h.replace(/\n/g, '<br>');
+            return `<div class="md-body">${h}</div>`;
           }
 
-          // 供 index.html iframe 调用，按文件名打开
           window.openFileByName = function(filename) {
-            // 在文件树中找到匹配的节点
-            const allItems = document.querySelectorAll('.tree-item');
-            for (const item of allItems) {
-              const label = item.querySelector('.label');
-              if (label && label.textContent.trim() === filename) {
-                item.click();
-                return;
-              }
-            }
+            document.querySelectorAll('.tree-item').forEach(item => {
+              if (item.dataset.name === filename) item.click();
+            });
           };
         </script>
         </body>
