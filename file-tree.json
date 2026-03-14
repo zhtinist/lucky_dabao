@@ -1,23 +1,25 @@
 [
   {
-    "type": "dir",
-    "name": "docs",
-    "children": []
-  },
-  {
-    "type": "dir",
-    "name": "images",
-    "children": []
-  },
-  {
     "type": "file",
     "name": "index.html",
     "path": "index.html.enc"
   },
   {
-    "type": "file",
-    "name": "投放宝典.md",
-    "path": "投放宝典.md.enc"
+    "type": "dir",
+    "name": "投放宝典",
+    "children": [
+      {
+        "type": "dir",
+        "name": "腾讯",
+        "children": [
+          {
+            "type": "file",
+            "name": "大宝见.md",
+            "path": "投放宝典\\腾讯\\大宝见.md.enc"
+          }
+        ]
+      }
+    ]
   },
   {
     "type": "dir",
