@@ -1,0 +1,380 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>加密文件库</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+
+    /* Login */
+    #login { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 16px; padding: 2.5rem 2rem; width: 360px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+    #login h1 { font-size: 1.6rem; margin-bottom: .4rem; }
+    #login p { color: #888; font-size: .9rem; margin-bottom: 1.8rem; }
+    #login input { width: 100%; padding: 12px 14px; background: #0f0f1a; border: 1px solid #333; border-radius: 8px; color: #e0e0e0; font-size: 1rem; margin-bottom: 1rem; outline: none; transition: border-color .2s; }
+    #login input:focus { border-color: #7c6af7; }
+    #login button { width: 100%; padding: 12px; background: linear-gradient(135deg,#7c6af7,#5e9cf7); border: none; border-radius: 8px; color: #fff; font-size: 1rem; cursor: pointer; transition: opacity .2s; }
+    #login button:hover { opacity: .85; }
+    #login-err { color: #f77; font-size: .85rem; margin-top: .8rem; min-height: 1.2em; }
+
+    /* App */
+    #app { display: none; width: 100vw; height: 100vh; flex-direction: column; }
+
+    /* Breadcrumb bar */
+    #breadcrumb { display: flex; align-items: center; gap: 0; padding: 0 1.2rem; height: 44px; flex-shrink: 0; background: #1a1a2e; border-bottom: 1px solid #2a2a4a; font-size: .88rem; overflow-x: auto; white-space: nowrap; }
+    #breadcrumb::-webkit-scrollbar { height: 3px; }
+    #breadcrumb::-webkit-scrollbar-thumb { background: #333; }
+    .bc-item { color: #7c6af7; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background .15s; }
+    .bc-item:hover { background: #252540; }
+    .bc-sep { color: #444; margin: 0 2px; }
+    .bc-current { color: #aaa; padding: 2px 4px; }
+
+    /* Shell */
+    #shell { flex: 1; overflow: hidden; display: flex; }
+
+    /* Sidebar */
+    #sidebar { width: 220px; min-width: 160px; background: #1a1a2e; border-right: 1px solid #2a2a4a; display: flex; flex-direction: column; overflow: hidden; }
+    #sidebar-header { padding: .8rem 1rem; border-bottom: 1px solid #2a2a4a; font-size: .82rem; color: #555; }
+    #tree { flex: 1; overflow-y: auto; padding: .3rem 0; }
+    #tree::-webkit-scrollbar { width: 4px; }
+    #tree::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    .t-item { display: flex; align-items: center; gap: 5px; padding: 5px 10px; cursor: pointer; font-size: .84rem; user-select: none; transition: background .15s; white-space: nowrap; overflow: hidden; }
+    .t-item:hover { background: #252540; }
+    .t-item.active { background: #2e2e55; color: #a89cf7; }
+    .t-item .lbl { overflow: hidden; text-overflow: ellipsis; }
+    .t-folder > .t-children { display: none; }
+    .t-folder.open > .t-children { display: block; }
+    .t-folder > .t-item .arr { font-size: .6rem; color: #555; transition: transform .2s; flex-shrink: 0; }
+    .t-folder.open > .t-item .arr { transform: rotate(90deg); }
+    .t-children { padding-left: 12px; }
+
+    /* Viewer */
+    #viewer { flex: 1; overflow: auto; padding: 1.6rem; }
+    #viewer::-webkit-scrollbar { width: 6px; }
+    #viewer::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+    /* Folder view */
+    #folder-view { display: none; }
+    .fv-title { font-size: 1.1rem; color: #fff; margin-bottom: 1.2rem; }
+    .fv-grid { display: flex; flex-direction: column; gap: .4rem; max-width: 700px; }
+    .fv-row { display: flex; align-items: center; gap: .8rem; padding: .7rem 1rem; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; cursor: pointer; transition: border-color .15s, background .15s; text-decoration: none; color: inherit; }
+    .fv-row:hover { border-color: #7c6af7; background: #1e1e38; }
+    .fv-row .fv-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .fv-row .fv-name { font-size: .92rem; color: #e0e0e0; }
+    .fv-row .fv-type { font-size: .78rem; color: #555; margin-left: auto; }
+
+    /* File view */
+    #file-view { display: none; }
+    #loading { display: none; padding: 3rem; text-align: center; color: #555; }
+    #placeholder { height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #333; gap: .6rem; }
+    #placeholder .big { font-size: 3rem; }
+
+    /* iframe */
+    #iframe-wrap { display: none; width: 100%; height: 80vh; }
+    #iframe-wrap iframe { width: 100%; height: 100%; border: none; border-radius: 8px; }
+
+    /* md */
+    #md-wrap { display: none; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 1.6rem; max-width: 820px; }
+    .md-body { line-height: 1.9; color: #ccc; }
+    .md-body h1 { font-size: 1.5rem; color: #fff; margin: .5rem 0 1rem; }
+    .md-body h2 { font-size: 1.15rem; color: #e0e0e0; margin: 1.4rem 0 .5rem; border-bottom: 1px solid #2a2a4a; padding-bottom: .3rem; }
+    .md-body h3 { font-size: 1rem; color: #ccc; margin: 1rem 0 .3rem; }
+    .md-body p { margin-bottom: .8rem; }
+    .md-body ul, .md-body ol { padding-left: 1.4rem; margin-bottom: .8rem; }
+    .md-body li { margin-bottom: .3rem; }
+    .md-body a { color: #7c6af7; text-decoration: none; }
+    .md-body a:hover { text-decoration: underline; }
+    .md-body blockquote { border-left: 3px solid #7c6af7; padding-left: .8rem; color: #888; margin: .6rem 0; }
+    .md-body hr { border: none; border-top: 1px solid #2a2a4a; margin: 1.2rem 0; }
+    .md-body strong { color: #fff; }
+    .md-body code { background: #0f0f1a; padding: 2px 6px; border-radius: 4px; font-size: .85em; color: #a89cf7; }
+    .md-body pre { background: #0f0f1a; padding: 1rem; border-radius: 8px; overflow-x: auto; margin-bottom: .8rem; }
+    .md-body table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: .88rem; }
+    .md-body th { background: #252540; color: #a89cf7; padding: 8px 12px; text-align: left; border: 1px solid #2a2a4a; }
+    .md-body td { padding: 7px 12px; border: 1px solid #2a2a4a; }
+    .md-body tr:nth-child(even) td { background: #16162a; }
+  </style>
+</head>
+<body>
+
+<div id="login">
+  <h1>🔐 加密文件库</h1>
+  <p>请输入密码以访问内容</p>
+  <input type="password" id="pwd" placeholder="访问密码" />
+  <button onclick="doLogin()">进入</button>
+  <div id="login-err"></div>
+</div>
+
+<div id="app">
+  <!-- 面包屑 -->
+  <div id="breadcrumb"></div>
+  <div id="shell">
+    <!-- 左侧树 -->
+    <div id="sidebar">
+      <div id="sidebar-header">文件目录</div>
+      <div id="tree"></div>
+    </div>
+    <!-- 右侧内容 -->
+    <div id="viewer">
+      <div id="placeholder"><div class="big">🗂️</div><div>从左侧选择文件</div></div>
+      <div id="loading">解密中...</div>
+      <!-- 文件夹列表 -->
+      <div id="folder-view">
+        <div class="fv-title" id="fv-title"></div>
+        <div class="fv-grid" id="fv-grid"></div>
+      </div>
+      <!-- 文件内容 -->
+      <div id="file-view">
+        <div id="iframe-wrap"><iframe id="frame" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>
+        <div id="md-wrap"><div class="md-body" id="md-body"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let PASSWORD = '';
+  let fileTree = [];
+  // 当前路径栈: [{name, nodes}]
+  let pathStack = [];
+
+  document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  async function doLogin() {
+    const pwd = document.getElementById('pwd').value.trim();
+    const err = document.getElementById('login-err');
+    if (!pwd) { err.textContent = '请输入密码'; return; }
+    try {
+      fileTree = await (await fetch('./file-tree.json')).json();
+      const first = findFirstFile(fileTree);
+      if (!first) { bootApp(pwd); return; }
+      const enc = await (await fetch('./encrypted/' + first)).text();
+      const dec = CryptoJS.AES.decrypt(enc, pwd).toString(CryptoJS.enc.Utf8);
+      if (dec) { err.textContent = ''; bootApp(pwd); }
+      else { err.textContent = '密码错误，请重试'; }
+    } catch(e) { err.textContent = '验证失败，请重试'; }
+  }
+
+  function findFirstFile(nodes) {
+    for (const n of nodes) {
+      if (n.type === 'file') return n.path;
+      if (n.type === 'dir') { const f = findFirstFile(n.children); if (f) return f; }
+    }
+    return null;
+  }
+
+  function bootApp(pwd) {
+    PASSWORD = pwd;
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    renderSidebar(fileTree, document.getElementById('tree'));
+    // 登录后先打开 index.html
+    const indexNode = findNodeByName(fileTree, 'index.html');
+    if (indexNode) openFile(indexNode);
+    else openFolder('主页', fileTree, []);
+  }
+
+  // ── 侧边栏树 ──────────────────────────────────────────────
+  function renderSidebar(nodes, container) {
+    nodes.forEach(node => {
+      if (node.type === 'dir') {
+        const wrap = document.createElement('div');
+        wrap.className = 't-folder';
+        const row = document.createElement('div');
+        row.className = 't-item';
+        row.innerHTML = '<span class="arr">▶</span><span>📂</span><span class="lbl">' + node.name + '</span>';
+        row.onclick = () => { wrap.classList.toggle('open'); openFolder(node.name, node.children, getPathTo(fileTree, node.name)); };
+        const ch = document.createElement('div');
+        ch.className = 't-children';
+        renderSidebar(node.children, ch);
+        wrap.appendChild(row); wrap.appendChild(ch);
+        container.appendChild(wrap);
+      } else {
+        const item = document.createElement('div');
+        item.className = 't-item';
+        item.dataset.path = node.path;
+        item.innerHTML = '<span>' + getIcon(node.name) + '</span><span class="lbl" title="' + node.name + '">' + node.name + '</span>';
+        item.onclick = () => { setActive(item); openFile(node); };
+        container.appendChild(item);
+      }
+    });
+  }
+
+  let activeItem = null;
+  function setActive(el) {
+    if (activeItem) activeItem.classList.remove('active');
+    activeItem = el;
+    if (el) el.classList.add('active');
+  }
+
+  // ── 文件夹视图 ────────────────────────────────────────────
+  function openFolder(name, nodes, pathArr) {
+    pathStack = pathArr.concat([{ name, nodes }]);
+    renderBreadcrumb();
+    showPanel('folder');
+    document.getElementById('fv-title').textContent = '📂 ' + name;
+    const grid = document.getElementById('fv-grid');
+    grid.innerHTML = '';
+    // 文件夹优先
+    const dirs  = nodes.filter(n => n.type === 'dir');
+    const files = nodes.filter(n => n.type === 'file');
+    [...dirs, ...files].forEach(node => {
+      const row = document.createElement('div');
+      row.className = 'fv-row';
+      const isDir = node.type === 'dir';
+      row.innerHTML = '<span class="fv-icon">' + (isDir ? '📂' : getIcon(node.name)) + '</span>'
+        + '<span class="fv-name">' + node.name + '</span>'
+        + '<span class="fv-type">' + (isDir ? '文件夹' : node.name.split('.').pop().toUpperCase()) + '</span>';
+      row.onclick = () => {
+        if (isDir) openFolder(node.name, node.children, pathStack);
+        else { const el = document.querySelector('.t-item[data-path="' + node.path + '"]'); setActive(el); openFile(node); }
+      };
+      grid.appendChild(row);
+    });
+  }
+
+  // ── 文件视图 ──────────────────────────────────────────────
+  async function openFile(node) {
+    pathStack = getPathTo(fileTree, node.name);
+    renderBreadcrumb(node.name);
+    showPanel('loading');
+    try {
+      const enc = await (await fetch('./encrypted/' + node.path)).text();
+      const dec = CryptoJS.AES.decrypt(enc, PASSWORD).toString(CryptoJS.enc.Utf8);
+      const ext = node.name.split('.').pop().toLowerCase();
+      if (['html','htm'].includes(ext)) {
+        showPanel('iframe');
+        document.getElementById('frame').src = URL.createObjectURL(new Blob([dec], {type:'text/html'}));
+      } else if (ext === 'md') {
+        showPanel('md');
+        document.getElementById('md-body').innerHTML = renderMd(dec);
+      } else {
+        showPanel('md');
+        document.getElementById('md-body').innerHTML = '<pre>' + escHtml(dec) + '</pre>';
+      }
+    } catch(e) {
+      showPanel('md');
+      document.getElementById('md-body').innerHTML = '<p style="color:#f77">解密失败</p>';
+    }
+  }
+
+  // ── 面包屑 ────────────────────────────────────────────────
+  function renderBreadcrumb(currentFile) {
+    const bc = document.getElementById('breadcrumb');
+    bc.innerHTML = '';
+    // 主页
+    const home = document.createElement('span');
+    home.className = 'bc-item';
+    home.textContent = '🏠 主页';
+    home.onclick = () => {
+      const idx = findNodeByName(fileTree, 'index.html');
+      if (idx) { setActive(null); openFile(idx); }
+      else openFolder('主页', fileTree, []);
+    };
+    bc.appendChild(home);
+
+    pathStack.forEach((seg, i) => {
+      const sep = document.createElement('span');
+      sep.className = 'bc-sep'; sep.textContent = ' / ';
+      bc.appendChild(sep);
+      const isLast = i === pathStack.length - 1 && !currentFile;
+      const el = document.createElement('span');
+      el.className = isLast ? 'bc-current' : 'bc-item';
+      el.textContent = seg.name;
+      if (!isLast) el.onclick = () => openFolder(seg.name, seg.nodes, pathStack.slice(0, i));
+      bc.appendChild(el);
+    });
+
+    if (currentFile) {
+      const sep = document.createElement('span');
+      sep.className = 'bc-sep'; sep.textContent = ' / ';
+      bc.appendChild(sep);
+      const el = document.createElement('span');
+      el.className = 'bc-current';
+      el.textContent = currentFile;
+      bc.appendChild(el);
+    }
+  }
+
+  // ── 工具函数 ──────────────────────────────────────────────
+  function showPanel(type) {
+    document.getElementById('placeholder').style.display  = 'none';
+    document.getElementById('loading').style.display      = type === 'loading' ? 'block' : 'none';
+    document.getElementById('folder-view').style.display  = type === 'folder'  ? 'block' : 'none';
+    document.getElementById('file-view').style.display    = ['iframe','md'].includes(type) ? 'block' : 'none';
+    document.getElementById('iframe-wrap').style.display  = type === 'iframe'  ? 'block' : 'none';
+    document.getElementById('md-wrap').style.display      = type === 'md'      ? 'block' : 'none';
+  }
+
+  function findNodeByName(nodes, name) {
+    for (const n of nodes) {
+      if (n.type === 'file' && n.name === name) return n;
+      if (n.type === 'dir') { const f = findNodeByName(n.children, name); if (f) return f; }
+    }
+    return null;
+  }
+
+  function getPathTo(nodes, targetName, stack) {
+    stack = stack || [];
+    for (const n of nodes) {
+      if (n.type === 'file' && n.name === targetName) return stack;
+      if (n.type === 'dir') {
+        const res = getPathTo(n.children, targetName, stack.concat([{name: n.name, nodes: n.children}]));
+        if (res) return res;
+      }
+    }
+    return null;
+  }
+
+  function getIcon(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    return {html:'🌐',htm:'🌐',md:'📝',txt:'📄',js:'📜',css:'🎨',json:'📋',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',svg:'🖼️',pdf:'📕'}[ext] || '📄';
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderMd(src) {
+    let h = src.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    // 表格
+    const tableBlocks = [];
+    h = h.replace(/(^\|.+\|\n)+/gm, block => {
+      const rows = block.trim().split('\n').filter(r => !/^\|[-| :]+\|$/.test(r));
+      const toRow = (r, tag) => '<tr>' + r.split('|').slice(1,-1).map(c => '<' + tag + '>' + c.trim() + '</' + tag + '>').join('') + '</tr>';
+      const html = '<table><thead>' + toRow(rows[0],'th') + '</thead><tbody>' + rows.slice(1).map(r => toRow(r,'td')).join('') + '</tbody></table>';
+      tableBlocks.push(html);
+      return '%%TABLE' + (tableBlocks.length-1) + '%%\n';
+    });
+    h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    h = h.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+    h = h.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+    h = h.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+    h = h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    h = h.replace(/\*(.+?)\*/g,'<em>$1</em>');
+    h = h.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+    h = h.replace(/^---$/gm,'<hr>');
+    h = h.replace(/`([^`]+)`/g,'<code>$1</code>');
+    h = h.replace(/^[-*] (.+)$/gm,'<li>$1</li>');
+    h = h.replace(/\n/g,'<br>');
+    tableBlocks.forEach((t,i) => { h = h.replace('%%TABLE' + i + '%%', t); });
+    return h;
+  }
+
+  // 供 index.html iframe 内调用
+  window.appNav = function(target) {
+    if (target.startsWith('folder:')) {
+      const name = target.slice(7);
+      const node = fileTree.find(n => n.type === 'dir' && n.name === name);
+      if (node) openFolder(node.name, node.children, []);
+    } else {
+      const node = findNodeByName(fileTree, target);
+      if (node) openFile(node);
+    }
+  };
+</script>
+</body>
+</html>
+
