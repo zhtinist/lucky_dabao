@@ -230,6 +230,15 @@ jobs:
               border-radius: 6px; background: #fff;
             }
 
+            .md-body { line-height: 1.8; color: #ccc; }
+            .md-body h1 { font-size: 1.5rem; color: #fff; margin: 1rem 0 .5rem; }
+            .md-body h2 { font-size: 1.2rem; color: #e0e0e0; margin: 1rem 0 .4rem; }
+            .md-body h3 { font-size: 1rem; color: #ccc; margin: .8rem 0 .3rem; }
+            .md-body ul  { padding-left: 1.4rem; margin: .4rem 0; }
+            .md-body blockquote { border-left: 3px solid #7c6af7; padding-left: .8rem; color: #888; margin: .5rem 0; }
+            .md-body hr  { border: none; border-top: 1px solid #2a2a4a; margin: 1rem 0; }
+            .md-body strong { color: #fff; }
+
             #loading {
               display: none; text-align: center; padding: 3rem; color: #666;
             }
@@ -389,6 +398,8 @@ jobs:
                 body.innerHTML = `<iframe src="${url}"></iframe>`;
               } else if (['png','jpg','jpeg','gif','svg'].includes(ext)) {
                 body.innerHTML = `<img src="data:image/${ext};base64,${btoa(dec)}" style="max-width:100%;border-radius:6px;">`;
+              } else if (ext === 'md') {
+                body.innerHTML = renderMd(dec);
               } else {
                 body.innerHTML = `<pre>${escHtml(dec)}</pre>`;
               }
@@ -402,6 +413,41 @@ jobs:
           function escHtml(s) {
             return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
           }
+
+          // 渲染简单 Markdown（粗体、标题、列表、分割线、换行）
+          function renderMd(src) {
+            let html = escHtml(src);
+            // 标题
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
+            // 粗体 / 斜体
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g,     '<em>$1</em>');
+            // 引用
+            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+            // 无序列表
+            html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+            // 分割线
+            html = html.replace(/^---$/gm, '<hr>');
+            // 换行
+            html = html.replace(/\n/g, '<br>');
+            return `<div class="md-body">${html}</div>`;
+          }
+
+          // 供 index.html iframe 调用，按文件名打开
+          window.openFileByName = function(filename) {
+            // 在文件树中找到匹配的节点
+            const allItems = document.querySelectorAll('.tree-item');
+            for (const item of allItems) {
+              const label = item.querySelector('.label');
+              if (label && label.textContent.trim() === filename) {
+                item.click();
+                return;
+              }
+            }
+          };
         </script>
         </body>
         </html>
