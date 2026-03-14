@@ -31,7 +31,7 @@ echo "# $REPO 加密网站
 
 ## 使用方法
 
-1. 将要加密的文件放在 \`原始文件\` 目录中
+1. 将要加密的文件放在 \`src\` 目录中
 2. 推送到 source 分支
 3. GitHub Actions 会自动加密文件并部署到 main 分支
 4. 访问 GitHub Pages 网址，输入密码查看内容
@@ -47,7 +47,7 @@ echo "# $REPO 加密网站
 \`\`\`
 ├── .github/workflows/
 │   └── encrypt-and-deploy.yml    # 自动化部署工作流
-├── 原始文件/                      # 放置要加密的文件
+├── src/                      # 放置要加密的文件
 │   ├── test.txt                  # 测试文件
 │   └── sample.html               # 示例 HTML 文件
 ├── README.md                     # 项目说明
@@ -102,4 +102,4 @@ echo ""
 echo "5. 访问网站："
 echo "   https://zhtinist.github.io/$REPO/"
 echo ""
-echo "注意：如果你有现有文件要加密，请将它们复制到 '原始文件' 目录中。"
+echo "注意：如果你有现有文件要加密，请将它们复制到 'src' 目录中。"

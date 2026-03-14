@@ -64,7 +64,7 @@ echo    https://zhtinist.github.io/lucky_dabao/
 echo    密码: %PASSWORD%
 echo.
 echo 后续使用：
-echo - 将要加密的文件放入 "原始文件" 目录
+echo - 将要加密的文件放入 "src" 目录
 echo - 运行: git add . ^&^& git commit -m "添加新文件" ^&^& git push origin source
 echo - GitHub Actions会自动加密并更新网站
 echo.

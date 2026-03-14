@@ -23,346 +23,398 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        
-    - name: 安装依赖
+
+    - name: Install dependencies
+      run: npm install crypto-js
+
+    - name: Encrypt files and generate site
+      env:
+        SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
       run: |
-        npm install crypto-js
-        
-    - name: 创建加密脚本
-      run: |
-        cat > encrypt.js << 'EOF'
+        node << 'SCRIPT'
         const CryptoJS = require('crypto-js');
         const fs = require('fs');
         const path = require('path');
-        
+
         const password = process.env.SITE_PASSWORD;
-        const sourceDir = './原始文件';
+        const sourceDir = './src';
         const outputDir = './encrypted';
-        
-        if (!fs.existsSync(outputDir)) {
-          fs.mkdirSync(outputDir, { recursive: true });
-        }
-        
-        function encryptFile(filePath, relativePath) {
-          const content = fs.readFileSync(filePath, 'utf8');
-          const encrypted = CryptoJS.AES.encrypt(content, password).toString();
-          
-          const outputPath = path.join(outputDir, relativePath + '.enc');
-          const outputDirPath = path.dirname(outputPath);
-          
-          if (!fs.existsSync(outputDirPath)) {
-            fs.mkdirSync(outputDirPath, { recursive: true });
-          }
-          
-          fs.writeFileSync(outputPath, encrypted);
-          console.log(`加密完成: ${relativePath}`);
-        }
-        
-        function walkDir(dir, baseDir = dir) {
-          const files = fs.readdirSync(dir);
-          
-          files.forEach(file => {
-            const filePath = path.join(dir, file);
-            const stat = fs.statSync(filePath);
-            
-            if (stat.isDirectory()) {
-              walkDir(filePath, baseDir);
+
+        // 递归加密所有文件，保留目录结构
+        function encryptDir(dir, baseDir) {
+          fs.readdirSync(dir).forEach(name => {
+            const full = path.join(dir, name);
+            const rel  = path.relative(baseDir, full);
+            if (fs.statSync(full).isDirectory()) {
+              encryptDir(full, baseDir);
             } else {
-              const relativePath = path.relative(baseDir, filePath);
-              encryptFile(filePath, relativePath);
+              const content   = fs.readFileSync(full, 'utf8');
+              const encrypted = CryptoJS.AES.encrypt(content, password).toString();
+              const dest      = path.join(outputDir, rel + '.enc');
+              fs.mkdirSync(path.dirname(dest), { recursive: true });
+              fs.writeFileSync(dest, encrypted);
+              console.log('encrypted:', rel);
             }
           });
         }
-        
+
         if (fs.existsSync(sourceDir)) {
-          walkDir(sourceDir);
-          console.log('所有文件加密完成');
-        } else {
-          console.log('源文件夹不存在');
+          fs.mkdirSync(outputDir, { recursive: true });
+          encryptDir(sourceDir, sourceDir);
         }
-        EOF
-        
-    - name: 加密文件
-      run: node encrypt.js
-      env:
-        SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
-        
-    - name: 创建解密页面
+
+        // 构建文件树 JSON（保留目录层级）
+        function buildTree(dir, baseDir) {
+          const result = [];
+          fs.readdirSync(dir).sort().forEach(name => {
+            const full = path.join(dir, name);
+            const rel  = path.relative(baseDir, full);
+            if (fs.statSync(full).isDirectory()) {
+              result.push({ type: 'dir', name, children: buildTree(full, baseDir) });
+            } else {
+              result.push({ type: 'file', name, path: rel + '.enc' });
+            }
+          });
+          return result;
+        }
+
+        const tree = fs.existsSync(sourceDir) ? buildTree(sourceDir, sourceDir) : [];
+        fs.writeFileSync('file-tree.json', JSON.stringify(tree, null, 2));
+        console.log('file-tree.json written');
+        SCRIPT
+
+    - name: Generate index.html
       run: |
         cat > index.html << 'EOF'
         <!DOCTYPE html>
         <html lang="zh-CN">
         <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>加密网站访问</title>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-            <style>
-                body {
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    margin: 0;
-                    padding: 0;
-                    min-height: 100vh;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                }
-                .container {
-                    background: white;
-                    padding: 2rem;
-                    border-radius: 10px;
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-                    text-align: center;
-                    max-width: 400px;
-                    width: 90%;
-                }
-                h1 {
-                    color: #333;
-                    margin-bottom: 1.5rem;
-                }
-                input[type="password"] {
-                    width: 100%;
-                    padding: 12px;
-                    border: 2px solid #ddd;
-                    border-radius: 5px;
-                    font-size: 16px;
-                    margin-bottom: 1rem;
-                    box-sizing: border-box;
-                }
-                button {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border: none;
-                    padding: 12px 30px;
-                    border-radius: 5px;
-                    font-size: 16px;
-                    cursor: pointer;
-                    transition: transform 0.2s;
-                }
-                button:hover {
-                    transform: translateY(-2px);
-                }
-                .error {
-                    color: #e74c3c;
-                    margin-top: 1rem;
-                }
-                .file-list {
-                    text-align: left;
-                    margin-top: 2rem;
-                    display: none;
-                }
-                .file-item {
-                    padding: 8px;
-                    border-bottom: 1px solid #eee;
-                    cursor: pointer;
-                    transition: background-color 0.2s;
-                }
-                .file-item:hover {
-                    background-color: #f5f5f5;
-                }
-                #content {
-                    display: none;
-                    margin-top: 2rem;
-                    text-align: left;
-                    max-height: 400px;
-                    overflow-y: auto;
-                    border: 1px solid #ddd;
-                    padding: 1rem;
-                    border-radius: 5px;
-                    background-color: #f9f9f9;
-                }
-            </style>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>加密文件库</title>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+          <style>
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+            body {
+              font-family: 'Segoe UI', system-ui, sans-serif;
+              background: #0f0f1a;
+              color: #e0e0e0;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+
+            /* ── Login ── */
+            #login {
+              background: #1a1a2e;
+              border: 1px solid #2a2a4a;
+              border-radius: 16px;
+              padding: 2.5rem 2rem;
+              width: 360px;
+              text-align: center;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            }
+            #login h1 { font-size: 1.6rem; margin-bottom: 0.4rem; }
+            #login p  { color: #888; font-size: 0.9rem; margin-bottom: 1.8rem; }
+            #login input {
+              width: 100%; padding: 12px 14px;
+              background: #0f0f1a; border: 1px solid #333;
+              border-radius: 8px; color: #e0e0e0; font-size: 1rem;
+              margin-bottom: 1rem; outline: none;
+              transition: border-color .2s;
+            }
+            #login input:focus { border-color: #7c6af7; }
+            #login button {
+              width: 100%; padding: 12px;
+              background: linear-gradient(135deg, #7c6af7, #5e9cf7);
+              border: none; border-radius: 8px;
+              color: #fff; font-size: 1rem; cursor: pointer;
+              transition: opacity .2s;
+            }
+            #login button:hover { opacity: .85; }
+            #login-err { color: #f77; font-size: .85rem; margin-top: .8rem; min-height: 1.2em; }
+
+            /* ── App shell ── */
+            #app {
+              display: none;
+              width: 100vw; height: 100vh;
+              flex-direction: row;
+            }
+
+            /* ── Sidebar ── */
+            #sidebar {
+              width: 280px; min-width: 220px;
+              background: #1a1a2e;
+              border-right: 1px solid #2a2a4a;
+              display: flex; flex-direction: column;
+              overflow: hidden;
+            }
+            #sidebar-header {
+              padding: 1.2rem 1rem;
+              border-bottom: 1px solid #2a2a4a;
+              font-weight: 600; font-size: .95rem;
+              color: #aaa; letter-spacing: .05em;
+            }
+            #tree {
+              flex: 1; overflow-y: auto; padding: .5rem 0;
+            }
+            #tree::-webkit-scrollbar { width: 4px; }
+            #tree::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+            /* tree nodes */
+            .tree-item {
+              display: flex; align-items: center; gap: 6px;
+              padding: 5px 12px; cursor: pointer;
+              font-size: .88rem; user-select: none;
+              transition: background .15s;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            }
+            .tree-item:hover { background: #252540; }
+            .tree-item.active { background: #2e2e55; color: #a89cf7; }
+            .tree-item .icon { flex-shrink: 0; font-size: 1rem; }
+            .tree-item .label { overflow: hidden; text-overflow: ellipsis; }
+
+            .tree-folder > .tree-children { display: none; }
+            .tree-folder.open > .tree-children { display: block; }
+            .tree-folder > .tree-item .arrow {
+              font-size: .7rem; color: #666; transition: transform .2s; flex-shrink: 0;
+            }
+            .tree-folder.open > .tree-item .arrow { transform: rotate(90deg); }
+
+            /* indent levels */
+            .tree-children { padding-left: 16px; }
+
+            /* ── Main content ── */
+            #main {
+              flex: 1; display: flex; flex-direction: column; overflow: hidden;
+            }
+            #topbar {
+              padding: .9rem 1.4rem;
+              border-bottom: 1px solid #2a2a4a;
+              font-size: .85rem; color: #666;
+              background: #16162a;
+            }
+            #viewer {
+              flex: 1; overflow: auto; padding: 1.5rem;
+            }
+            #viewer::-webkit-scrollbar { width: 6px; }
+            #viewer::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+            #placeholder {
+              height: 100%; display: flex; flex-direction: column;
+              align-items: center; justify-content: center;
+              color: #444; gap: .6rem;
+            }
+            #placeholder .big { font-size: 3rem; }
+
+            #file-content {
+              display: none;
+              background: #1a1a2e; border: 1px solid #2a2a4a;
+              border-radius: 10px; padding: 1.4rem;
+            }
+            #file-content h2 { font-size: 1rem; color: #a89cf7; margin-bottom: 1rem; }
+            #file-content pre {
+              white-space: pre-wrap; word-break: break-word;
+              font-family: 'Cascadia Code', 'Fira Code', monospace;
+              font-size: .85rem; line-height: 1.6; color: #ccc;
+            }
+            #file-content iframe {
+              width: 100%; height: 70vh; border: none;
+              border-radius: 6px; background: #fff;
+            }
+
+            #loading {
+              display: none; text-align: center; padding: 3rem; color: #666;
+            }
+          </style>
         </head>
         <body>
-            <div class="container">
-                <h1>🔐 访问加密网站</h1>
-                <div id="login-form">
-                    <input type="password" id="password" placeholder="请输入访问密码" />
-                    <button onclick="verifyPassword()">访问网站</button>
-                    <div id="error" class="error"></div>
-                </div>
-                
-                <div id="file-list" class="file-list">
-                    <h3>选择要查看的文件：</h3>
-                    <div id="files"></div>
-                </div>
-                
-                <div id="content"></div>
+
+        <!-- Login -->
+        <div id="login">
+          <h1>🔐 加密文件库</h1>
+          <p>请输入密码以访问内容</p>
+          <input type="password" id="pwd" placeholder="访问密码" />
+          <button onclick="doLogin()">进入</button>
+          <div id="login-err"></div>
+        </div>
+
+        <!-- App -->
+        <div id="app">
+          <div id="sidebar">
+            <div id="sidebar-header">📁 文件目录</div>
+            <div id="tree"></div>
+          </div>
+          <div id="main">
+            <div id="topbar" id="breadcrumb">选择左侧文件查看内容</div>
+            <div id="viewer">
+              <div id="placeholder">
+                <div class="big">🗂️</div>
+                <div>从左侧选择一个文件</div>
+              </div>
+              <div id="loading">解密中...</div>
+              <div id="file-content">
+                <h2 id="file-title"></h2>
+                <div id="file-body"></div>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <script>
-                let currentPassword = '';
-                let fileList = [];
+        <script>
+          let PASSWORD = '';
 
-                async function loadFileList() {
-                    try {
-                        const response = await fetch('./file-list.json');
-                        fileList = await response.json();
-                    } catch (error) {
-                        console.error('无法加载文件列表:', error);
-                    }
-                }
+          // ── Login ──────────────────────────────────────────
+          document.getElementById('pwd').addEventListener('keydown', e => {
+            if (e.key === 'Enter') doLogin();
+          });
 
-                async function verifyPassword() {
-                    const password = document.getElementById('password').value;
-                    const errorDiv = document.getElementById('error');
-                    
-                    if (!password) {
-                        errorDiv.textContent = '请输入密码';
-                        return;
-                    }
+          async function doLogin() {
+            const pwd = document.getElementById('pwd').value.trim();
+            const err = document.getElementById('login-err');
+            if (!pwd) { err.textContent = '请输入密码'; return; }
 
-                    try {
-                        // 尝试解密一个测试文件来验证密码
-                        const testResponse = await fetch('./encrypted/test.txt.enc');
-                        if (testResponse.ok) {
-                            const encryptedContent = await testResponse.text();
-                            const decrypted = CryptoJS.AES.decrypt(encryptedContent, password);
-                            const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
-                            
-                            if (decryptedText) {
-                                currentPassword = password;
-                                showFileList();
-                                errorDiv.textContent = '';
-                            } else {
-                                errorDiv.textContent = '密码错误，请重试';
-                            }
-                        } else {
-                            // 如果没有测试文件，直接显示文件列表
-                            currentPassword = password;
-                            showFileList();
-                            errorDiv.textContent = '';
-                        }
-                    } catch (error) {
-                        errorDiv.textContent = '验证失败，请重试';
-                    }
-                }
+            // verify with first .enc file
+            try {
+              const res  = await fetch('./file-tree.json');
+              const tree = await res.json();
+              const first = findFirstFile(tree);
+              if (!first) { bootApp(pwd); return; }
 
-                function showFileList() {
-                    document.getElementById('login-form').style.display = 'none';
-                    document.getElementById('file-list').style.display = 'block';
-                    
-                    loadEncryptedFiles();
-                }
+              const r2  = await fetch('./encrypted/' + first);
+              const enc = await r2.text();
+              const dec = CryptoJS.AES.decrypt(enc, pwd).toString(CryptoJS.enc.Utf8);
+              if (dec) { err.textContent = ''; bootApp(pwd); }
+              else     { err.textContent = '密码错误，请重试'; }
+            } catch(e) {
+              err.textContent = '验证失败，请重试';
+            }
+          }
 
-                async function loadEncryptedFiles() {
-                    const filesDiv = document.getElementById('files');
-                    
-                    try {
-                        // 尝试加载文件列表
-                        const response = await fetch('./file-list.json');
-                        if (response.ok) {
-                            const files = await response.json();
-                            
-                            if (files.length === 0) {
-                                filesDiv.innerHTML = '<p>没有找到加密文件</p>';
-                                return;
-                            }
+          function findFirstFile(nodes) {
+            for (const n of nodes) {
+              if (n.type === 'file') return n.path;
+              if (n.type === 'dir') {
+                const f = findFirstFile(n.children);
+                if (f) return f;
+              }
+            }
+            return null;
+          }
 
-                            files.forEach(file => {
-                                const fileItem = document.createElement('div');
-                                fileItem.className = 'file-item';
-                                const displayName = file.replace('encrypted/', '').replace('.enc', '');
-                                fileItem.textContent = displayName;
-                                fileItem.onclick = () => decryptAndShowFile(file.replace('encrypted/', ''));
-                                filesDiv.appendChild(fileItem);
-                            });
-                        } else {
-                            // 如果没有文件列表，尝试直接访问已知文件
-                            const knownFiles = ['test.txt.enc', 'sample.html.enc'];
-                            let foundFiles = [];
-                            
-                            for (const file of knownFiles) {
-                                try {
-                                    const testResponse = await fetch(`./encrypted/${file}`);
-                                    if (testResponse.ok) {
-                                        foundFiles.push(file);
-                                    }
-                                } catch (e) {
-                                    // 忽略错误，继续检查下一个文件
-                                }
-                            }
-                            
-                            if (foundFiles.length === 0) {
-                                filesDiv.innerHTML = '<p>没有找到加密文件</p>';
-                                return;
-                            }
-                            
-                            foundFiles.forEach(file => {
-                                const fileItem = document.createElement('div');
-                                fileItem.className = 'file-item';
-                                fileItem.textContent = file.replace('.enc', '');
-                                fileItem.onclick = () => decryptAndShowFile(file);
-                                filesDiv.appendChild(fileItem);
-                            });
-                        }
-                        
-                    } catch (error) {
-                        filesDiv.innerHTML = '<p>无法加载文件列表</p>';
-                        console.error('加载文件列表失败:', error);
-                    }
-                }
+          // ── Boot ───────────────────────────────────────────
+          async function bootApp(pwd) {
+            PASSWORD = pwd;
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('app').style.display   = 'flex';
 
-                async function decryptAndShowFile(filename) {
-                    const contentDiv = document.getElementById('content');
-                    
-                    try {
-                        const response = await fetch(`./encrypted/${filename}`);
-                        const encryptedContent = await response.text();
-                        
-                        const decrypted = CryptoJS.AES.decrypt(encryptedContent, currentPassword);
-                        const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
-                        
-                        if (decryptedText) {
-                            contentDiv.innerHTML = `<h4>${filename.replace('.enc', '')}</h4><pre>${decryptedText}</pre>`;
-                            contentDiv.style.display = 'block';
-                        } else {
-                            contentDiv.innerHTML = '<p>解密失败</p>';
-                            contentDiv.style.display = 'block';
-                        }
-                    } catch (error) {
-                        contentDiv.innerHTML = '<p>加载文件失败</p>';
-                        contentDiv.style.display = 'block';
-                    }
-                }
+            const res  = await fetch('./file-tree.json');
+            const tree = await res.json();
+            renderTree(tree, document.getElementById('tree'));
+          }
 
-                // 回车键登录
-                document.getElementById('password').addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        verifyPassword();
-                    }
-                });
+          // ── Tree rendering ─────────────────────────────────
+          function renderTree(nodes, container) {
+            nodes.forEach(node => {
+              if (node.type === 'dir') {
+                const folder = document.createElement('div');
+                folder.className = 'tree-folder';
 
-                // 页面加载时初始化
-                window.onload = function() {
-                    loadFileList();
-                };
-            </script>
+                const row = document.createElement('div');
+                row.className = 'tree-item';
+                row.innerHTML = `<span class="arrow">▶</span><span class="icon">📂</span><span class="label">${node.name}</span>`;
+                row.onclick = () => folder.classList.toggle('open');
+
+                const children = document.createElement('div');
+                children.className = 'tree-children';
+                renderTree(node.children, children);
+
+                folder.appendChild(row);
+                folder.appendChild(children);
+                container.appendChild(folder);
+              } else {
+                const item = document.createElement('div');
+                item.className = 'tree-item';
+                const icon = getIcon(node.name);
+                item.innerHTML = `<span class="icon">${icon}</span><span class="label" title="${node.name}">${node.name}</span>`;
+                item.onclick = () => openFile(node.path, node.name, item);
+                container.appendChild(item);
+              }
+            });
+          }
+
+          function getIcon(name) {
+            const ext = name.split('.').pop().toLowerCase();
+            const map = { html:'🌐', htm:'🌐', md:'📝', txt:'📄', js:'📜', ts:'📜',
+                          css:'🎨', json:'📋', png:'🖼️', jpg:'🖼️', jpeg:'🖼️',
+                          gif:'🖼️', svg:'🖼️', pdf:'📕', zip:'📦', mp4:'🎬', mp3:'🎵' };
+            return map[ext] || '📄';
+          }
+
+          // ── File viewer ────────────────────────────────────
+          let activeItem = null;
+
+          async function openFile(encPath, name, itemEl) {
+            if (activeItem) activeItem.classList.remove('active');
+            activeItem = itemEl;
+            itemEl.classList.add('active');
+
+            document.getElementById('topbar').textContent = name;
+            document.getElementById('placeholder').style.display  = 'none';
+            document.getElementById('file-content').style.display = 'none';
+            document.getElementById('loading').style.display      = 'block';
+
+            try {
+              const res  = await fetch('./encrypted/' + encPath);
+              const enc  = await res.text();
+              const dec  = CryptoJS.AES.decrypt(enc, PASSWORD).toString(CryptoJS.enc.Utf8);
+
+              document.getElementById('loading').style.display      = 'none';
+              document.getElementById('file-content').style.display = 'block';
+              document.getElementById('file-title').textContent     = name;
+
+              const body = document.getElementById('file-body');
+              const ext  = name.split('.').pop().toLowerCase();
+
+              if (['html','htm'].includes(ext)) {
+                const blob = new Blob([dec], { type: 'text/html' });
+                const url  = URL.createObjectURL(blob);
+                body.innerHTML = `<iframe src="${url}"></iframe>`;
+              } else if (['png','jpg','jpeg','gif','svg'].includes(ext)) {
+                body.innerHTML = `<img src="data:image/${ext};base64,${btoa(dec)}" style="max-width:100%;border-radius:6px;">`;
+              } else {
+                body.innerHTML = `<pre>${escHtml(dec)}</pre>`;
+              }
+            } catch(e) {
+              document.getElementById('loading').style.display = 'none';
+              document.getElementById('file-content').style.display = 'block';
+              document.getElementById('file-body').innerHTML = '<pre style="color:#f77">解密失败</pre>';
+            }
+          }
+
+          function escHtml(s) {
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          }
+        </script>
         </body>
         </html>
         EOF
-        
-    - name: 创建文件列表
-      run: |
-        echo '[]' > file-list.json
-        if [ -d "encrypted" ]; then
-          find encrypted -name "*.enc" | jq -R -s -c 'split("\n")[:-1]' > file-list.json
-        fi
-        
+
     - name: Setup Pages
       uses: actions/configure-pages@v4
-      
+
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
         path: '.'
-        
+
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
