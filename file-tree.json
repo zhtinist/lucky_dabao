@@ -16,12 +16,63 @@
   },
   {
     "type": "file",
-    "name": "投放宝典.html",
-    "path": "投放宝典.html.enc"
+    "name": "投放宝典.md",
+    "path": "投放宝典.md.enc"
   },
   {
-    "type": "file",
-    "name": "数据采集.html",
-    "path": "数据采集.html.enc"
+    "type": "dir",
+    "name": "数据采集",
+    "children": [
+      {
+        "type": "dir",
+        "name": "快手",
+        "children": [
+          {
+            "type": "file",
+            "name": "连接.md",
+            "path": "数据采集\\快手\\连接.md.enc"
+          }
+        ]
+      },
+      {
+        "type": "dir",
+        "name": "抖音",
+        "children": [
+          {
+            "type": "file",
+            "name": "连接.md",
+            "path": "数据采集\\抖音\\连接.md.enc"
+          }
+        ]
+      },
+      {
+        "type": "dir",
+        "name": "腾讯",
+        "children": [
+          {
+            "type": "dir",
+            "name": "大宝见",
+            "children": [
+              {
+                "type": "file",
+                "name": "连接.md",
+                "path": "数据采集\\腾讯\\大宝见\\连接.md.enc"
+              }
+            ]
+          },
+          {
+            "type": "dir",
+            "name": "秦刚",
+            "children": [
+              {
+                "type": "file",
+                "name": "连接.md",
+                "path": "数据采集\\腾讯\\秦刚\\连接.md.enc"
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 ]
