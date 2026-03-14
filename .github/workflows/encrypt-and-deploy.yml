@@ -255,38 +255,57 @@ jobs:
                     const filesDiv = document.getElementById('files');
                     
                     try {
-                        // 获取所有加密文件
-                        const response = await fetch('./encrypted/');
-                        const text = await response.text();
-                        
-                        // 简单的文件列表解析（这里可能需要根据实际情况调整）
-                        const files = [];
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(text, 'text/html');
-                        const links = doc.querySelectorAll('a');
-                        
-                        links.forEach(link => {
-                            const href = link.getAttribute('href');
-                            if (href && href.endsWith('.enc')) {
-                                files.push(href);
+                        // 尝试加载文件列表
+                        const response = await fetch('./file-list.json');
+                        if (response.ok) {
+                            const files = await response.json();
+                            
+                            if (files.length === 0) {
+                                filesDiv.innerHTML = '<p>没有找到加密文件</p>';
+                                return;
                             }
-                        });
 
-                        if (files.length === 0) {
-                            filesDiv.innerHTML = '<p>没有找到加密文件</p>';
-                            return;
+                            files.forEach(file => {
+                                const fileItem = document.createElement('div');
+                                fileItem.className = 'file-item';
+                                const displayName = file.replace('encrypted/', '').replace('.enc', '');
+                                fileItem.textContent = displayName;
+                                fileItem.onclick = () => decryptAndShowFile(file.replace('encrypted/', ''));
+                                filesDiv.appendChild(fileItem);
+                            });
+                        } else {
+                            // 如果没有文件列表，尝试直接访问已知文件
+                            const knownFiles = ['test.txt.enc', 'sample.html.enc'];
+                            let foundFiles = [];
+                            
+                            for (const file of knownFiles) {
+                                try {
+                                    const testResponse = await fetch(`./encrypted/${file}`);
+                                    if (testResponse.ok) {
+                                        foundFiles.push(file);
+                                    }
+                                } catch (e) {
+                                    // 忽略错误，继续检查下一个文件
+                                }
+                            }
+                            
+                            if (foundFiles.length === 0) {
+                                filesDiv.innerHTML = '<p>没有找到加密文件</p>';
+                                return;
+                            }
+                            
+                            foundFiles.forEach(file => {
+                                const fileItem = document.createElement('div');
+                                fileItem.className = 'file-item';
+                                fileItem.textContent = file.replace('.enc', '');
+                                fileItem.onclick = () => decryptAndShowFile(file);
+                                filesDiv.appendChild(fileItem);
+                            });
                         }
-
-                        files.forEach(file => {
-                            const fileItem = document.createElement('div');
-                            fileItem.className = 'file-item';
-                            fileItem.textContent = file.replace('.enc', '');
-                            fileItem.onclick = () => decryptAndShowFile(file);
-                            filesDiv.appendChild(fileItem);
-                        });
                         
                     } catch (error) {
                         filesDiv.innerHTML = '<p>无法加载文件列表</p>';
+                        console.error('加载文件列表失败:', error);
                     }
                 }
 
