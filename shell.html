@@ -172,6 +172,7 @@
           <input id="search-input" placeholder="搜索文件名... (支持正则)" onkeydown="if(event.key==='Enter')doSearch()" style="background:#1e1e3a;border:1px solid #2a2a4a;border-radius:6px 0 0 6px;color:#ccc;padding:3px 8px 3px 26px;font-size:.85rem;width:10rem;outline:none;">
         </div>
         <button class="font-btn" onclick="doSearch()" style="border-radius:0 6px 6px 0;border-left:none;padding:3px 10px;"><i class="fa-solid fa-search"></i></button>
+        <button class="font-btn" onclick="clearSearch()" title="清除搜索"><i class="fa-solid fa-xmark"></i></button>
         <button class="font-btn" id="regex-btn" onclick="toggleRegex()" title="正则模式" style="font-size:.75rem;">.*</button>
       </div>
       <button class="font-btn" id="sort-btn" onclick="toggleSort()" title="排序">⇅ 名称</button>
@@ -385,6 +386,12 @@
       row.onclick = () => { setActive(null); openFile(node); };
       sv.appendChild(row);
     });
+  }
+
+  function clearSearch() {
+    document.getElementById('search-input').value = '';
+    renderFolderGrid(currentFolderNodes);
+    showPanel('folder');
   }
 
   function onSearch() {
