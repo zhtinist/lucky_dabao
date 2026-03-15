@@ -256,6 +256,7 @@
     try {
       const enc = await (await fetch('./encrypted/' + node.path)).text();
       const dec = CryptoJS.AES.decrypt(enc, PASSWORD).toString(CryptoJS.enc.Utf8);
+      if (!dec) throw new Error('解密结果为空，密码可能有误或文件损坏');
       const ext = node.name.split('.').pop().toLowerCase();
       if (['html','htm'].includes(ext)) {
         showPanel('iframe');
@@ -269,7 +270,7 @@
       }
     } catch(e) {
       showPanel('md');
-      document.getElementById('md-body').innerHTML = '<p style="color:#f77">解密失败</p>';
+      document.getElementById('md-body').innerHTML = '<p style="color:#f77">解密失败: ' + e.message + '</p>';
     }
   }
 
@@ -377,14 +378,8 @@
   }
 
   function renderMd(src) {
-    // 统一换行符
     src = src.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    // 配置 marked：开启 GFM（表格/删除线等），链接新标签打开
-    const renderer = new marked.Renderer();
-    renderer.link = (href, title, text) =>
-      `<a href="${href}" target="_blank" rel="noopener"${title ? ` title="${title}"` : ''}>${text}</a>`;
-    marked.setOptions({ gfm: true, breaks: false, renderer });
-    return marked.parse(src);
+    return marked.parse(src, { gfm: true, breaks: false });
   }
 
   // 供 index.html iframe 内调用
