@@ -249,7 +249,7 @@
   // ── 文件视图 ──────────────────────────────────────────────
   async function openFile(node) {
     // 用 node.path 精确定位路径，避免同名文件匹配错误
-    pathStack = getPathByFilePath(fileTree, node.path);
+    pathStack = getPathByFilePath(fileTree, node.path) || [];
     renderBreadcrumb(node.name);
     showPanel('loading');
     try {
@@ -347,10 +347,10 @@
       if (n.type === 'file' && n.path === filePath) return stack;
       if (n.type === 'dir') {
         const res = getPathByFilePath(n.children, filePath, stack.concat([{name: n.name, nodes: n.children}]));
-        if (res) return res;
+        if (res !== null) return res;
       }
     }
-    return [];
+    return null;
   }
 
   // 通过文件夹的 children 引用精确定位文件夹路径（避免同名文件夹混淆）
@@ -376,6 +376,8 @@
   }
 
   function renderMd(src) {
+    // 统一换行符（Windows CRLF → LF），否则表格正则匹配失败
+    src = src.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     // 先还原已有的 HTML 实体，统一用原始字符处理
     src = src.replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&');
 
