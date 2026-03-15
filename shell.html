@@ -185,7 +185,11 @@
         const row = document.createElement('div');
         row.className = 't-item';
         row.innerHTML = '<span class="arr">▶</span><span>📂</span><span class="lbl">' + node.name + '</span>';
-        row.onclick = () => { wrap.classList.toggle('open'); openFolder(node.name, node.children, getPathTo(fileTree, node.name)); };
+        row.onclick = () => {
+          wrap.classList.toggle('open');
+          const folderPath = getPathToDir(fileTree, node.name, node.children);
+          openFolder(node.name, node.children, folderPath || []);
+        };
         const ch = document.createElement('div');
         ch.className = 't-children';
         renderSidebar(node.children, ch);
@@ -228,8 +232,15 @@
         + '<span class="fv-name">' + node.name + '</span>'
         + '<span class="fv-type">' + (isDir ? '文件夹' : node.name.split('.').pop().toUpperCase()) + '</span>';
       row.onclick = () => {
-        if (isDir) openFolder(node.name, node.children, pathStack);
-        else { const el = document.querySelector('.t-item[data-path="' + node.path + '"]'); setActive(el); openFile(node); }
+        if (isDir) {
+          // 用精确路径定位该文件夹在树中的位置，避免 pathStack 叠加错误
+          const folderPath = getPathToDir(fileTree, node.name, node.children);
+          openFolder(node.name, node.children, folderPath);
+        } else {
+          const el = document.querySelector('.t-item[data-path="' + node.path + '"]');
+          setActive(el);
+          openFile(node);
+        }
       };
       grid.appendChild(row);
     });
@@ -342,6 +353,19 @@
     return [];
   }
 
+  // 通过文件夹的 children 引用精确定位文件夹路径（避免同名文件夹混淆）
+  function getPathToDir(nodes, dirName, dirChildren, stack) {
+    stack = stack || [];
+    for (const n of nodes) {
+      if (n.type === 'dir') {
+        if (n.name === dirName && n.children === dirChildren) return stack;
+        const res = getPathToDir(n.children, dirName, dirChildren, stack.concat([{name: n.name, nodes: n.children}]));
+        if (res !== null) return res;
+      }
+    }
+    return null;
+  }
+
   function getIcon(name) {
     const ext = name.split('.').pop().toLowerCase();
     return {html:'🌐',htm:'🌐',md:'📝',txt:'📄',js:'📜',css:'🎨',json:'📋',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',svg:'🖼️',pdf:'📕'}[ext] || '📄';
@@ -352,31 +376,40 @@
   }
 
   function renderMd(src) {
-    // 先提取表格（用原始文本处理，避免转义干扰）
+    // 先还原已有的 HTML 实体，统一用原始字符处理
+    src = src.replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&');
+
+    // 1. 提取表格块（在 escHtml 之前处理）
     const tableBlocks = [];
-    src = src.replace(/(^\|.+\|\n?(^\|[-| :]+\|\n?)?(^\|.+\|\n?)*)/gm, block => {
-      const lines = block.trim().split('\n');
-      const dataLines = lines.filter(r => !/^\|[\s\-|:]+\|$/.test(r));
-      if (dataLines.length < 1) return block;
-      const toRow = (r, tag) => '<tr>' + r.split('|').slice(1,-1).map(c => '<' + tag + '>' + escHtml(c.trim()) + '</' + tag + '>').join('') + '</tr>';
-      const html = '<table><thead>' + toRow(dataLines[0],'th') + '</thead><tbody>' + dataLines.slice(1).map(r => toRow(r,'td')).join('') + '</tbody></table>';
+    src = src.replace(/^(\|.+\|\n)+/gm, block => {
+      const lines = block.trim().split('\n').filter(r => !/^\|[\s\-|:]+\|$/.test(r));
+      if (!lines.length) return block;
+      const cell = (s, tag) => '<' + tag + '>' + escHtml(s.trim()) + '</' + tag + '>';
+      const toRow = (r, tag) => '<tr>' + r.split('|').slice(1,-1).map(c => cell(c,tag)).join('') + '</tr>';
+      const html = '<table><thead>' + toRow(lines[0],'th') + '</thead><tbody>'
+        + lines.slice(1).map(r => toRow(r,'td')).join('') + '</tbody></table>';
       tableBlocks.push(html);
-      return '%%TABLE' + (tableBlocks.length-1) + '%%\n';
+      return '%%TABLE' + (tableBlocks.length - 1) + '%%\n';
     });
 
+    // 2. 转义剩余文本
     let h = escHtml(src);
+
+    // 3. Markdown 规则
     h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-    h = h.replace(/^### (.+)$/gm,'<h3>$1</h3>');
-    h = h.replace(/^## (.+)$/gm,'<h2>$1</h2>');
-    h = h.replace(/^# (.+)$/gm,'<h1>$1</h1>');
-    h = h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-    h = h.replace(/\*(.+?)\*/g,'<em>$1</em>');
-    h = h.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
-    h = h.replace(/^---$/gm,'<hr>');
-    h = h.replace(/`([^`]+)`/g,'<code>$1</code>');
-    h = h.replace(/^[-*] (.+)$/gm,'<li>$1</li>');
-    h = h.replace(/\n/g,'<br>');
-    tableBlocks.forEach((t,i) => { h = h.replace('%%TABLE' + i + '%%', t); });
+    h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    h = h.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
+    h = h.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
+    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    h = h.replace(/\*(.+?)\*/g,     '<em>$1</em>');
+    h = h.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+    h = h.replace(/^---$/gm, '<hr>');
+    h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+    h = h.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+    h = h.replace(/\n/g, '<br>');
+
+    // 4. 还原表格
+    tableBlocks.forEach((t, i) => { h = h.replace('%%TABLE' + i + '%%', t); });
     return h;
   }
 
