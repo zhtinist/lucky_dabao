@@ -41,7 +41,7 @@ function buildTree(dir, baseDir) {
     if (fs.statSync(full).isDirectory()) {
       return { type: 'dir', name, children: buildTree(full, baseDir) };
     }
-    return { type: 'file', name, path: rel + '.enc' };
+    return { type: 'file', name, path: rel.replace(/\\/g, '/') + '.enc' };
   });
 }
 

@@ -382,6 +382,8 @@
     src = src.replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&');
 
     // 1. 提取表格块（在 escHtml 之前处理）
+    // 确保文本末尾有换行，避免最后一行表格行匹配失败
+    if (!src.endsWith('\n')) src += '\n';
     const tableBlocks = [];
     src = src.replace(/^(\|.+\|\n)+/gm, block => {
       const lines = block.trim().split('\n').filter(r => !/^\|[\s\-|:]+\|$/.test(r));
