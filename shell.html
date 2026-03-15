@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>运营数据库</title>
+  <link rel="icon" type="image/png" href="./favicon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -403,8 +404,7 @@
   }
 
   function getSortedFiltered(nodes) {
-    const q = (document.getElementById('search-input').value || '').trim().toLowerCase();
-    let list = q ? nodes.filter(n => n.name.toLowerCase().includes(q)) : [...nodes];
+    let list = [...nodes];
     if (sortMode === 'name-asc')  list.sort((a,b) => a.name.localeCompare(b.name));
     if (sortMode === 'name-desc') list.sort((a,b) => b.name.localeCompare(a.name));
     if (sortMode === 'type') list.sort((a,b) => {
