@@ -29,13 +29,15 @@
     #app { display: none; width: 100vw; height: 100vh; flex-direction: column; }
 
     /* ── Breadcrumb ── */
-    #breadcrumb { display: flex; align-items: center; padding: 0 1rem; height: 2.6rem; flex-shrink: 0; background: #13132a; border-bottom: 1px solid #2a2a4a; font-size: .86rem; overflow-x: auto; white-space: nowrap; gap: 2px; }
+    #breadcrumb { display: flex; align-items: center; padding: 0 1rem; height: 2.6rem; flex-shrink: 0; background: #13132a; border-bottom: 1px solid #2a2a4a; font-size: 1rem; overflow-x: auto; white-space: nowrap; gap: 2px; }
     #breadcrumb::-webkit-scrollbar { height: 3px; }
     #breadcrumb::-webkit-scrollbar-thumb { background: #333; }
     .bc-item { color: #7c6af7; cursor: pointer; padding: 3px 6px; border-radius: 5px; transition: background .15s; display: flex; align-items: center; gap: 4px; }
     .bc-item:hover { background: #252545; }
     .bc-sep { color: #333; margin: 0 1px; }
     .bc-current { color: #888; padding: 3px 6px; }
+    .font-btn { background: #1e1e3a; border: 1px solid #2a2a4a; color: #aaa; border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: .85rem; transition: background .15s; flex-shrink: 0; }
+    .font-btn:hover { background: #2a2a50; color: #fff; }
 
     /* ── Shell ── */
     #shell { flex: 1; overflow: hidden; display: flex; }
@@ -151,6 +153,11 @@
 <div id="app">
   <div id="breadcrumb">
     <button id="menu-btn" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+    <span id="bc-content" style="flex:1;display:flex;align-items:center;gap:2px;overflow-x:auto;"></span>
+    <div style="display:flex;gap:.3rem;flex-shrink:0;margin-left:.5rem;">
+      <button class="font-btn" onclick="adjustFont(-1)" title="缩小字体">A-</button>
+      <button class="font-btn" onclick="adjustFont(1)"  title="放大字体">A+</button>
+    </div>
   </div>
   <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
   <div id="shell">
@@ -190,6 +197,11 @@
     'YouTube': { fa: 'fa-brands fa-youtube',   color: '#ff0000' },
     'Bilibili':{ fa: 'fa-brands fa-bilibili',  color: '#00a1d6' },
   };
+
+  function adjustFont(dir) {
+    const cur = parseFloat(getComputedStyle(document.body).fontSize);
+    document.body.style.fontSize = Math.min(Math.max(cur + dir * 4, 18), 80) + 'px';
+  }
 
   function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
@@ -358,7 +370,7 @@
 
   // ── 面包屑 ──
   function renderBreadcrumb(currentFile) {
-    const bc = document.getElementById('breadcrumb');
+    const bc = document.getElementById('bc-content');
     bc.innerHTML = '';
     const home = document.createElement('span');
     home.className = 'bc-item';
