@@ -24,7 +24,7 @@ function encryptDir(dir, baseDir, password) {
     if (fs.statSync(full).isDirectory()) {
       encryptDir(full, baseDir, password);
     } else {
-      const content   = fs.readFileSync(full, 'utf8');
+      const content   = fs.readFileSync(full, 'utf8').replace(/^\uFEFF/, '');
       const encrypted = CryptoJS.AES.encrypt(content, password).toString();
       const dest      = path.join(outputDir, rel + '.enc');
       fs.mkdirSync(path.dirname(dest), { recursive: true });
