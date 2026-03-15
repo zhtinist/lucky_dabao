@@ -97,7 +97,18 @@
     .fv-row .fv-name { font-size: 1.1rem; color: #ddd; line-height: 1.3; word-break: break-all; }
     .fv-row .fv-badge { font-size: .72rem; color: #555; background: #13132a; border: 1px solid #2a2a4a; padding: 2px 10px; border-radius: 20px; }
 
-    /* ── File view ── */
+    /* ── Search view ── */
+    #search-view { max-width: 860px; }
+    .sv-header { font-size: 1rem; color: #888; margin-bottom: 1rem; }
+    .sv-header span { color: #a89cf7; }
+    .sv-item { display: flex; align-items: center; gap: .8rem; padding: .7rem 1rem; background: #1a1a2e; border: 1px solid #1e1e3a; border-radius: 8px; margin-bottom: .4rem; cursor: pointer; transition: border-color .15s, background .15s; }
+    .sv-item:hover { border-color: #7c6af7; background: #1c1c38; }
+    .sv-item .sv-icon { color: #5e9cf7; width: 1.2rem; text-align: center; flex-shrink: 0; }
+    .sv-item .sv-name { color: #e0e0e0; font-size: .95rem; flex-shrink: 0; }
+    .sv-item .sv-path { color: #555; font-size: .8rem; margin-left: .4rem; }
+    .sv-empty { color: #444; padding: 2rem; text-align: center; }
+    .sv-err { color: #f77; padding: .5rem 1rem; font-size: .85rem; background: #2a1a1a; border-radius: 6px; margin-bottom: .8rem; }
+    #regex-btn.active { background: #2a2a50; color: #a89cf7; border-color: #7c6af7; }
     #file-view { display: none; }
     #loading { display: none; padding: 3rem; text-align: center; color: #444; }
     #loading i { font-size: 1.5rem; animation: spin 1s linear infinite; }
@@ -154,9 +165,13 @@
     <button id="menu-btn" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
     <span id="bc-content" style="flex:1;display:flex;align-items:center;gap:2px;overflow-x:auto;"></span>
     <div style="display:flex;gap:.3rem;flex-shrink:0;margin-left:.5rem;align-items:center;">
-      <div style="position:relative;">
-        <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#444;font-size:.8rem;pointer-events:none;"></i>
-        <input id="search-input" placeholder="搜索..." oninput="onSearch()" style="background:#1e1e3a;border:1px solid #2a2a4a;border-radius:6px;color:#ccc;padding:3px 8px 3px 26px;font-size:.85rem;width:8rem;outline:none;">
+      <div style="position:relative;display:flex;align-items:center;gap:.3rem;">
+        <div style="position:relative;">
+          <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#444;font-size:.8rem;pointer-events:none;"></i>
+          <input id="search-input" placeholder="搜索文件名... (支持正则)" onkeydown="if(event.key==='Enter')doSearch()" style="background:#1e1e3a;border:1px solid #2a2a4a;border-radius:6px 0 0 6px;color:#ccc;padding:3px 8px 3px 26px;font-size:.85rem;width:10rem;outline:none;">
+        </div>
+        <button class="font-btn" onclick="doSearch()" style="border-radius:0 6px 6px 0;border-left:none;padding:3px 10px;"><i class="fa-solid fa-search"></i></button>
+        <button class="font-btn" id="regex-btn" onclick="toggleRegex()" title="正则模式" style="font-size:.75rem;">.*</button>
       </div>
       <button class="font-btn" id="sort-btn" onclick="toggleSort()" title="排序">⇅ 名称</button>
       <button class="font-btn" onclick="adjustFont(-1)" title="缩小字体">A-</button>
@@ -172,6 +187,7 @@
     <div id="viewer">
       <div id="placeholder"><i class="fa-regular fa-folder-open"></i><span>从左侧选择文件</span></div>
       <div id="loading"><i class="fa-solid fa-circle-notch"></i></div>
+      <div id="search-view" style="display:none;"></div>
       <div id="folder-view">
         <div class="fv-header">
           <div class="fv-icon-big" id="fv-icon-big"></div>
@@ -314,8 +330,68 @@
   let currentFolderNodes = [];
   let sortMode = 'default'; // default | name-asc | name-desc | type
 
+  let useRegex = false;
+
+  function toggleRegex() {
+    useRegex = !useRegex;
+    document.getElementById('regex-btn').classList.toggle('active', useRegex);
+  }
+
+  // 递归收集当前文件夹及子文件夹所有文件
+  function collectFiles(nodes, pathPrefix) {
+    let results = [];
+    for (const n of nodes) {
+      if (n.type === 'file') {
+        results.push({ node: n, location: pathPrefix });
+      } else if (n.type === 'dir') {
+        results = results.concat(collectFiles(n.children, pathPrefix ? pathPrefix + ' / ' + n.name : n.name));
+      }
+    }
+    return results;
+  }
+
+  function doSearch() {
+    const q = document.getElementById('search-input').value.trim();
+    if (!q) { renderFolderGrid(currentFolderNodes); showPanel('folder'); return; }
+
+    let matcher;
+    const sv = document.getElementById('search-view');
+    if (useRegex) {
+      try { const re = new RegExp(q, 'i'); matcher = name => re.test(name); }
+      catch(e) {
+        showPanel('search');
+        sv.innerHTML = `<div class="sv-err"><i class="fa-solid fa-triangle-exclamation"></i> 正则错误: ${e.message}</div>`;
+        return;
+      }
+    } else {
+      matcher = name => name.toLowerCase().includes(q.toLowerCase());
+    }
+
+    // 搜索当前文件夹（currentFolderNodes）及其子文件夹
+    const all = collectFiles(currentFolderNodes, '');
+    const hits = all.filter(r => matcher(r.node.name));
+
+    showPanel('search');
+    sv.innerHTML = `<div class="sv-header">在 <span>${pathStack[pathStack.length-1]?.name || '主页'}</span> 中找到 <span>${hits.length}</span> 个结果</div>`;
+    if (!hits.length) { sv.innerHTML += `<div class="sv-empty">没有匹配的文件</div>`; return; }
+
+    hits.forEach(({ node, location }) => {
+      const row = document.createElement('div');
+      row.className = 'sv-item';
+      row.innerHTML = `<i class="sv-icon fa-solid fa-file-lines"></i>`
+        + `<span class="sv-name">${node.name}</span>`
+        + `<span class="sv-path">${location || '当前目录'}</span>`;
+      row.onclick = () => { setActive(null); openFile(node); };
+      sv.appendChild(row);
+    });
+  }
+
   function onSearch() {
-    renderFolderGrid(currentFolderNodes);
+    // 清空时恢复文件夹视图
+    if (!document.getElementById('search-input').value.trim()) {
+      renderFolderGrid(currentFolderNodes);
+      showPanel('folder');
+    }
   }
 
   function toggleSort() {
@@ -401,6 +477,7 @@
     document.getElementById('fv-subtitle').textContent = nodes.filter(n=>n.type==='dir').length + ' 个文件夹  ' + nodes.filter(n=>n.type==='file').length + ' 个文件';
     currentFolderNodes = nodes;
     document.getElementById('search-input').value = '';
+    showPanel('folder');
     renderFolderGrid(nodes);
   }
 
@@ -467,6 +544,7 @@
   function showPanel(type) {
     document.getElementById('placeholder').style.display  = 'none';
     document.getElementById('loading').style.display      = type === 'loading' ? 'block' : 'none';
+    document.getElementById('search-view').style.display  = type === 'search'  ? 'block' : 'none';
     document.getElementById('folder-view').style.display  = type === 'folder'  ? 'block' : 'none';
     document.getElementById('file-view').style.display    = ['iframe','md'].includes(type) ? 'block' : 'none';
     document.getElementById('iframe-wrap').style.display  = type === 'iframe'  ? 'block' : 'none';
