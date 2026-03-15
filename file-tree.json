@@ -1,26 +1,49 @@
 [
   {
-    "type": "file",
-    "name": "index.html",
-    "path": "index.html.enc"
-  },
-  {
     "type": "dir",
-    "name": "投放宝典",
+    "name": "Bilibili",
     "children": [
       {
         "type": "dir",
-        "name": "腾讯",
+        "name": "大宝见",
         "children": [
           {
             "type": "file",
-            "name": "大宝见.md",
-            "path": "投放宝典/腾讯/大宝见.md.enc"
+            "name": "投放指南.md",
+            "path": "Bilibili/大宝见/投放指南.md.enc"
           },
           {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "Bilibili/大宝见/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "dir",
+        "name": "秦刚",
+        "children": [
+          {
             "type": "file",
-            "name": "秦刚.md",
-            "path": "投放宝典/腾讯/秦刚.md.enc"
+            "name": "投放指南.md",
+            "path": "Bilibili/秦刚/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "Bilibili/秦刚/数据记录/2026.md.enc"
+              }
+            ]
           }
         ]
       }
@@ -28,53 +51,247 @@
   },
   {
     "type": "dir",
-    "name": "数据采集",
+    "name": "YouTube",
     "children": [
       {
         "type": "dir",
-        "name": "快手",
+        "name": "大宝见",
         "children": [
           {
             "type": "file",
-            "name": "连接.md",
-            "path": "数据采集/快手/连接.md.enc"
-          }
-        ]
-      },
-      {
-        "type": "dir",
-        "name": "抖音",
-        "children": [
-          {
-            "type": "file",
-            "name": "连接.md",
-            "path": "数据采集/抖音/连接.md.enc"
-          }
-        ]
-      },
-      {
-        "type": "dir",
-        "name": "腾讯",
-        "children": [
-          {
-            "type": "dir",
-            "name": "大宝见",
-            "children": [
-              {
-                "type": "file",
-                "name": "连接.md",
-                "path": "数据采集/腾讯/大宝见/连接.md.enc"
-              }
-            ]
+            "name": "投放指南.md",
+            "path": "YouTube/大宝见/投放指南.md.enc"
           },
           {
             "type": "dir",
-            "name": "秦刚",
+            "name": "数据记录",
             "children": [
               {
                 "type": "file",
-                "name": "连接.md",
-                "path": "数据采集/腾讯/秦刚/连接.md.enc"
+                "name": "2026.md",
+                "path": "YouTube/大宝见/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "dir",
+        "name": "秦刚",
+        "children": [
+          {
+            "type": "file",
+            "name": "投放指南.md",
+            "path": "YouTube/秦刚/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "YouTube/秦刚/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "dir",
+    "name": "小红书",
+    "children": [
+      {
+        "type": "dir",
+        "name": "大宝见",
+        "children": [
+          {
+            "type": "file",
+            "name": "投放指南.md",
+            "path": "小红书/大宝见/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "小红书/大宝见/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "dir",
+        "name": "秦刚",
+        "children": [
+          {
+            "type": "file",
+            "name": "投放指南.md",
+            "path": "小红书/秦刚/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "小红书/秦刚/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "dir",
+    "name": "快手",
+    "children": [
+      {
+        "type": "dir",
+        "name": "大宝见",
+        "children": [
+          {
+            "type": "file",
+            "name": "投放指南.md",
+            "path": "快手/大宝见/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "快手/大宝见/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "dir",
+        "name": "秦刚",
+        "children": [
+          {
+            "type": "file",
+            "name": "投放指南.md",
+            "path": "快手/秦刚/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "快手/秦刚/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "dir",
+    "name": "抖音",
+    "children": [
+      {
+        "type": "dir",
+        "name": "大宝见",
+        "children": [
+          {
+            "type": "file",
+            "name": "投放指南.md",
+            "path": "抖音/大宝见/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "抖音/大宝见/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "dir",
+        "name": "秦刚",
+        "children": [
+          {
+            "type": "file",
+            "name": "投放指南.md",
+            "path": "抖音/秦刚/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "抖音/秦刚/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "dir",
+    "name": "腾讯",
+    "children": [
+      {
+        "type": "dir",
+        "name": "大宝见",
+        "children": [
+          {
+            "type": "file",
+            "name": "投放指南.md",
+            "path": "腾讯/大宝见/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "腾讯/大宝见/数据记录/2026.md.enc"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "dir",
+        "name": "秦刚",
+        "children": [
+          {
+            "type": "file",
+            "name": "投放指南.md",
+            "path": "腾讯/秦刚/投放指南.md.enc"
+          },
+          {
+            "type": "dir",
+            "name": "数据记录",
+            "children": [
+              {
+                "type": "file",
+                "name": "2026.md",
+                "path": "腾讯/秦刚/数据记录/2026.md.enc"
               }
             ]
           }
