@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>加密文件库</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -376,45 +377,14 @@
   }
 
   function renderMd(src) {
-    // 统一换行符（Windows CRLF → LF），否则表格正则匹配失败
+    // 统一换行符
     src = src.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    // 先还原已有的 HTML 实体，统一用原始字符处理
-    src = src.replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&');
-
-    // 1. 提取表格块（在 escHtml 之前处理）
-    // 确保文本末尾有换行，避免最后一行表格行匹配失败
-    if (!src.endsWith('\n')) src += '\n';
-    const tableBlocks = [];
-    src = src.replace(/^(\|.+\|\n)+/gm, block => {
-      const lines = block.trim().split('\n').filter(r => !/^\|[\s\-|:]+\|$/.test(r));
-      if (!lines.length) return block;
-      const cell = (s, tag) => '<' + tag + '>' + escHtml(s.trim()) + '</' + tag + '>';
-      const toRow = (r, tag) => '<tr>' + r.split('|').slice(1,-1).map(c => cell(c,tag)).join('') + '</tr>';
-      const html = '<table><thead>' + toRow(lines[0],'th') + '</thead><tbody>'
-        + lines.slice(1).map(r => toRow(r,'td')).join('') + '</tbody></table>';
-      tableBlocks.push(html);
-      return '%%TABLE' + (tableBlocks.length - 1) + '%%\n';
-    });
-
-    // 2. 转义剩余文本
-    let h = escHtml(src);
-
-    // 3. Markdown 规则
-    h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-    h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-    h = h.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
-    h = h.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
-    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    h = h.replace(/\*(.+?)\*/g,     '<em>$1</em>');
-    h = h.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-    h = h.replace(/^---$/gm, '<hr>');
-    h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
-    h = h.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
-    h = h.replace(/\n/g, '<br>');
-
-    // 4. 还原表格
-    tableBlocks.forEach((t, i) => { h = h.replace('%%TABLE' + i + '%%', t); });
-    return h;
+    // 配置 marked：开启 GFM（表格/删除线等），链接新标签打开
+    const renderer = new marked.Renderer();
+    renderer.link = (href, title, text) =>
+      `<a href="${href}" target="_blank" rel="noopener"${title ? ` title="${title}"` : ''}>${text}</a>`;
+    marked.setOptions({ gfm: true, breaks: false, renderer });
+    return marked.parse(src);
   }
 
   // 供 index.html iframe 内调用
