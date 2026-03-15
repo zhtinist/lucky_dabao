@@ -3,130 +3,148 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>加密文件库</title>
+  <title>运营数据库</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 
-    /* Login */
-    #login { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 16px; padding: 2.5rem 2rem; width: 360px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
-    #login h1 { font-size: 1.6rem; margin-bottom: .4rem; }
-    #login p { color: #888; font-size: .9rem; margin-bottom: 1.8rem; }
-    #login input { width: 100%; padding: 12px 14px; background: #0f0f1a; border: 1px solid #333; border-radius: 8px; color: #e0e0e0; font-size: 1rem; margin-bottom: 1rem; outline: none; transition: border-color .2s; }
+    /* ── Login ── */
+    #login { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 20px; padding: 2.8rem 2.2rem; width: 380px; text-align: center; box-shadow: 0 24px 80px rgba(0,0,0,.6); }
+    #login .login-icon { font-size: 3rem; margin-bottom: 1rem; background: linear-gradient(135deg,#7c6af7,#5e9cf7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    #login h1 { font-size: 1.5rem; margin-bottom: .3rem; color: #fff; }
+    #login p { color: #666; font-size: .88rem; margin-bottom: 2rem; }
+    #login .input-wrap { position: relative; margin-bottom: 1rem; }
+    #login .input-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #444; }
+    #login input { width: 100%; padding: 12px 14px 12px 40px; background: #0f0f1a; border: 1px solid #2a2a4a; border-radius: 10px; color: #e0e0e0; font-size: 1rem; outline: none; transition: border-color .2s; }
     #login input:focus { border-color: #7c6af7; }
-    #login button { width: 100%; padding: 12px; background: linear-gradient(135deg,#7c6af7,#5e9cf7); border: none; border-radius: 8px; color: #fff; font-size: 1rem; cursor: pointer; transition: opacity .2s; }
+    #login button { width: 100%; padding: 13px; background: linear-gradient(135deg,#7c6af7,#5e9cf7); border: none; border-radius: 10px; color: #fff; font-size: 1rem; cursor: pointer; transition: opacity .2s; display: flex; align-items: center; justify-content: center; gap: .5rem; }
     #login button:hover { opacity: .85; }
     #login-err { color: #f77; font-size: .85rem; margin-top: .8rem; min-height: 1.2em; }
 
-    /* App */
+    /* ── App ── */
     #app { display: none; width: 100vw; height: 100vh; flex-direction: column; }
 
-    /* Breadcrumb bar */
-    #breadcrumb { display: flex; align-items: center; gap: 0; padding: 0 1.2rem; height: 44px; flex-shrink: 0; background: #1a1a2e; border-bottom: 1px solid #2a2a4a; font-size: .88rem; overflow-x: auto; white-space: nowrap; }
+    /* ── Breadcrumb ── */
+    #breadcrumb { display: flex; align-items: center; padding: 0 1.2rem; height: 46px; flex-shrink: 0; background: #13132a; border-bottom: 1px solid #2a2a4a; font-size: .86rem; overflow-x: auto; white-space: nowrap; gap: 2px; }
     #breadcrumb::-webkit-scrollbar { height: 3px; }
     #breadcrumb::-webkit-scrollbar-thumb { background: #333; }
-    .bc-item { color: #7c6af7; cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: background .15s; }
-    .bc-item:hover { background: #252540; }
-    .bc-sep { color: #444; margin: 0 2px; }
-    .bc-current { color: #aaa; padding: 2px 4px; }
+    .bc-item { color: #7c6af7; cursor: pointer; padding: 3px 6px; border-radius: 5px; transition: background .15s; display: flex; align-items: center; gap: 4px; }
+    .bc-item:hover { background: #252545; }
+    .bc-sep { color: #333; margin: 0 1px; }
+    .bc-current { color: #888; padding: 3px 6px; }
 
-    /* Shell */
+    /* ── Shell ── */
     #shell { flex: 1; overflow: hidden; display: flex; }
 
-    /* Sidebar */
-    #sidebar { width: 220px; min-width: 160px; background: #1a1a2e; border-right: 1px solid #2a2a4a; display: flex; flex-direction: column; overflow: hidden; }
-    #sidebar-header { padding: .8rem 1rem; border-bottom: 1px solid #2a2a4a; font-size: .82rem; color: #555; }
-    #tree { flex: 1; overflow-y: auto; padding: .3rem 0; }
-    #tree::-webkit-scrollbar { width: 4px; }
-    #tree::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-    .t-item { display: flex; align-items: center; gap: 5px; padding: 5px 10px; cursor: pointer; font-size: .84rem; user-select: none; transition: background .15s; white-space: nowrap; overflow: hidden; }
-    .t-item:hover { background: #252540; }
-    .t-item.active { background: #2e2e55; color: #a89cf7; }
-    .t-item .lbl { overflow: hidden; text-overflow: ellipsis; }
+    /* ── Sidebar ── */
+    #sidebar { width: 230px; min-width: 160px; background: #13132a; border-right: 1px solid #1e1e3a; display: flex; flex-direction: column; overflow: hidden; }
+    #sidebar-header { padding: .9rem 1rem; border-bottom: 1px solid #1e1e3a; font-size: .75rem; color: #444; letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; gap: .5rem; }
+    #tree { flex: 1; overflow-y: auto; padding: .4rem 0; }
+    #tree::-webkit-scrollbar { width: 3px; }
+    #tree::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 2px; }
+    .t-item { display: flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer; font-size: .83rem; user-select: none; transition: background .15s; white-space: nowrap; overflow: hidden; border-radius: 4px; margin: 1px 4px; }
+    .t-item:hover { background: #1e1e3a; }
+    .t-item.active { background: #252550; color: #a89cf7; }
+    .t-item .lbl { overflow: hidden; text-overflow: ellipsis; flex: 1; }
+    .t-item .t-fa { width: 14px; text-align: center; flex-shrink: 0; font-size: .8rem; }
     .t-folder > .t-children { display: none; }
     .t-folder.open > .t-children { display: block; }
-    .t-folder > .t-item .arr { font-size: .6rem; color: #555; transition: transform .2s; flex-shrink: 0; }
-    .t-folder.open > .t-item .arr { transform: rotate(90deg); }
-    .t-children { padding-left: 12px; }
+    .t-folder > .t-item .arr { font-size: .55rem; color: #444; transition: transform .2s; flex-shrink: 0; }
+    .t-folder.open > .t-item .arr { transform: rotate(90deg); color: #666; }
+    .t-children { padding-left: 14px; }
 
-    /* Viewer */
-    #viewer { flex: 1; overflow: auto; padding: 1.6rem; }
+    /* ── Viewer ── */
+    #viewer { flex: 1; overflow: auto; padding: 1.8rem; background: #0f0f1a; }
     #viewer::-webkit-scrollbar { width: 6px; }
-    #viewer::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    #viewer::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
 
-    /* Folder view */
+    /* ── Folder view ── */
     #folder-view { display: none; }
-    .fv-title { font-size: 1.1rem; color: #fff; margin-bottom: 1.2rem; }
-    .fv-grid { display: flex; flex-direction: column; gap: .4rem; max-width: 700px; }
-    .fv-row { display: flex; align-items: center; gap: .8rem; padding: .7rem 1rem; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; cursor: pointer; transition: border-color .15s, background .15s; text-decoration: none; color: inherit; }
-    .fv-row:hover { border-color: #7c6af7; background: #1e1e38; }
-    .fv-row .fv-icon { font-size: 1.2rem; flex-shrink: 0; }
-    .fv-row .fv-name { font-size: .92rem; color: #e0e0e0; }
-    .fv-row .fv-type { font-size: .78rem; color: #555; margin-left: auto; }
+    .fv-header { display: flex; align-items: center; gap: .8rem; margin-bottom: 1.6rem; }
+    .fv-header .fv-icon-big { font-size: 2rem; }
+    .fv-title { font-size: 1.3rem; color: #fff; font-weight: 600; }
+    .fv-subtitle { font-size: .82rem; color: #444; margin-top: .1rem; }
+    .fv-grid { display: flex; flex-direction: column; gap: .5rem; max-width: 720px; }
+    .fv-row { display: flex; align-items: center; gap: 1rem; padding: .85rem 1.1rem; background: #1a1a2e; border: 1px solid #1e1e3a; border-radius: 10px; cursor: pointer; transition: border-color .15s, background .15s, transform .1s; }
+    .fv-row:hover { border-color: #7c6af7; background: #1c1c38; transform: translateX(2px); }
+    .fv-row .fv-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .fv-row .fv-icon.dir  { background: #1e1e40; color: #7c6af7; }
+    .fv-row .fv-icon.file { background: #1a2a1a; color: #6af7a0; }
+    .fv-row .fv-icon.md   { background: #1a2535; color: #5e9cf7; }
+    .fv-row .fv-name { font-size: .92rem; color: #ddd; flex: 1; }
+    .fv-row .fv-badge { font-size: .72rem; color: #555; background: #1a1a2e; border: 1px solid #2a2a4a; padding: 2px 8px; border-radius: 20px; }
 
-    /* File view */
+    /* ── File view ── */
     #file-view { display: none; }
-    #loading { display: none; padding: 3rem; text-align: center; color: #555; }
-    #placeholder { height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #333; gap: .6rem; }
-    #placeholder .big { font-size: 3rem; }
+    #loading { display: none; padding: 3rem; text-align: center; color: #444; }
+    #loading i { font-size: 1.5rem; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #placeholder { height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #2a2a4a; gap: .8rem; }
+    #placeholder i { font-size: 4rem; }
+    #placeholder span { font-size: .9rem; color: #333; }
 
-    /* iframe */
+    /* ── iframe ── */
     #iframe-wrap { display: none; width: 100%; height: 80vh; }
-    #iframe-wrap iframe { width: 100%; height: 100%; border: none; border-radius: 8px; }
+    #iframe-wrap iframe { width: 100%; height: 100%; border: none; border-radius: 10px; }
 
-    /* md */
-    #md-wrap { display: none; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 10px; padding: 1.6rem; max-width: 820px; }
-    .md-body { line-height: 1.9; color: #ccc; }
-    .md-body h1 { font-size: 1.5rem; color: #fff; margin: .5rem 0 1rem; }
-    .md-body h2 { font-size: 1.15rem; color: #e0e0e0; margin: 1.4rem 0 .5rem; border-bottom: 1px solid #2a2a4a; padding-bottom: .3rem; }
-    .md-body h3 { font-size: 1rem; color: #ccc; margin: 1rem 0 .3rem; }
-    .md-body p { margin-bottom: .8rem; }
-    .md-body ul, .md-body ol { padding-left: 1.4rem; margin-bottom: .8rem; }
-    .md-body li { margin-bottom: .3rem; }
+    /* ── Markdown ── */
+    #md-wrap { display: none; background: #1a1a2e; border: 1px solid #1e1e3a; border-radius: 12px; padding: 2rem; max-width: 860px; }
+    .md-body { line-height: 1.9; color: #bbb; }
+    .md-body h1 { font-size: 1.5rem; color: #fff; margin: .5rem 0 1.2rem; padding-bottom: .6rem; border-bottom: 1px solid #2a2a4a; }
+    .md-body h2 { font-size: 1.15rem; color: #e0e0e0; margin: 1.6rem 0 .6rem; }
+    .md-body h3 { font-size: 1rem; color: #ccc; margin: 1.2rem 0 .4rem; }
+    .md-body p { margin-bottom: .9rem; }
+    .md-body ul, .md-body ol { padding-left: 1.5rem; margin-bottom: .9rem; }
+    .md-body li { margin-bottom: .35rem; }
     .md-body a { color: #7c6af7; text-decoration: none; }
-    .md-body a:hover { text-decoration: underline; }
-    .md-body blockquote { border-left: 3px solid #7c6af7; padding-left: .8rem; color: #888; margin: .6rem 0; }
-    .md-body hr { border: none; border-top: 1px solid #2a2a4a; margin: 1.2rem 0; }
+    .md-body a:hover { text-decoration: underline; color: #a89cf7; }
+    .md-body blockquote { border-left: 3px solid #7c6af7; padding: .4rem .8rem; color: #777; margin: .8rem 0; background: #13132a; border-radius: 0 6px 6px 0; }
+    .md-body hr { border: none; border-top: 1px solid #2a2a4a; margin: 1.4rem 0; }
     .md-body strong { color: #fff; }
-    .md-body code { background: #0f0f1a; padding: 2px 6px; border-radius: 4px; font-size: .85em; color: #a89cf7; }
-    .md-body pre { background: #0f0f1a; padding: 1rem; border-radius: 8px; overflow-x: auto; margin-bottom: .8rem; }
-    .md-body table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: .88rem; }
-    .md-body th { background: #252540; color: #a89cf7; padding: 8px 12px; text-align: left; border: 1px solid #2a2a4a; }
-    .md-body td { padding: 7px 12px; border: 1px solid #2a2a4a; }
-    .md-body tr:nth-child(even) td { background: #16162a; }
+    .md-body em { color: #a89cf7; }
+    .md-body code { background: #0f0f1a; padding: 2px 7px; border-radius: 4px; font-size: .85em; color: #a89cf7; border: 1px solid #2a2a4a; }
+    .md-body pre { background: #0f0f1a; padding: 1.2rem; border-radius: 8px; overflow-x: auto; margin-bottom: 1rem; border: 1px solid #1e1e3a; }
+    .md-body table { width: 100%; border-collapse: collapse; margin-bottom: 1.2rem; font-size: .87rem; }
+    .md-body th { background: #1e1e40; color: #a89cf7; padding: 9px 13px; text-align: left; border: 1px solid #2a2a4a; font-weight: 600; }
+    .md-body td { padding: 8px 13px; border: 1px solid #1e1e3a; }
+    .md-body tr:nth-child(even) td { background: #141428; }
+    .md-body tr:hover td { background: #1a1a35; }
   </style>
 </head>
 <body>
 
 <div id="login">
-  <h1>🔐 加密文件库</h1>
+  <div class="login-icon"><i class="fa-solid fa-shield-halved"></i></div>
+  <h1>运营数据库</h1>
   <p>请输入密码以访问内容</p>
-  <input type="password" id="pwd" placeholder="访问密码" />
-  <button onclick="doLogin()">进入</button>
+  <div class="input-wrap">
+    <i class="fa-solid fa-key"></i>
+    <input type="password" id="pwd" placeholder="访问密码" />
+  </div>
+  <button onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> 进入</button>
   <div id="login-err"></div>
 </div>
 
 <div id="app">
-  <!-- 面包屑 -->
   <div id="breadcrumb"></div>
   <div id="shell">
-    <!-- 左侧树 -->
     <div id="sidebar">
-      <div id="sidebar-header">文件目录</div>
+      <div id="sidebar-header"><i class="fa-solid fa-folder-tree"></i> 文件目录</div>
       <div id="tree"></div>
     </div>
-    <!-- 右侧内容 -->
     <div id="viewer">
-      <div id="placeholder"><div class="big">🗂️</div><div>从左侧选择文件</div></div>
-      <div id="loading">解密中...</div>
-      <!-- 文件夹列表 -->
+      <div id="placeholder"><i class="fa-regular fa-folder-open"></i><span>从左侧选择文件</span></div>
+      <div id="loading"><i class="fa-solid fa-circle-notch"></i></div>
       <div id="folder-view">
-        <div class="fv-title" id="fv-title"></div>
+        <div class="fv-header">
+          <div class="fv-icon-big" id="fv-icon-big"></div>
+          <div><div class="fv-title" id="fv-title"></div><div class="fv-subtitle" id="fv-subtitle"></div></div>
+        </div>
         <div class="fv-grid" id="fv-grid"></div>
       </div>
-      <!-- 文件内容 -->
       <div id="file-view">
         <div id="iframe-wrap"><iframe id="frame" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>
         <div id="md-wrap"><div class="md-body" id="md-body"></div></div>
@@ -138,8 +156,17 @@
 <script>
   let PASSWORD = '';
   let fileTree = [];
-  // 当前路径栈: [{name, nodes}]
   let pathStack = [];
+
+  // 平台图标映射
+  const PLATFORM_ICONS = {
+    '腾讯':    { fa: 'fa-brands fa-weixin',    color: '#07c160' },
+    '抖音':    { fa: 'fa-brands fa-tiktok',    color: '#fe2c55' },
+    '快手':    { fa: 'fa-solid fa-video',       color: '#ff6600' },
+    '小红书':  { fa: 'fa-solid fa-book-open',   color: '#ff2442' },
+    'YouTube': { fa: 'fa-brands fa-youtube',   color: '#ff0000' },
+    'Bilibili':{ fa: 'fa-brands fa-bilibili',  color: '#00a1d6' },
+  };
 
   document.getElementById('pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
@@ -171,36 +198,49 @@
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     renderSidebar(fileTree, document.getElementById('tree'));
-    // 登录后先打开 index.html
-    const indexNode = findNodeByName(fileTree, 'index.html');
-    if (indexNode) openFile(indexNode);
-    else openFolder('主页', fileTree, []);
+    openFolder('主页', fileTree, []);
   }
 
-  // ── 侧边栏树 ──────────────────────────────────────────────
-  function renderSidebar(nodes, container) {
+  // ── 侧边栏 ──
+  function getPlatformIcon(name) {
+    const p = PLATFORM_ICONS[name];
+    if (p) return `<i class="t-fa ${p.fa}" style="color:${p.color}"></i>`;
+    return `<i class="t-fa fa-solid fa-folder" style="color:#7c6af7"></i>`;
+  }
+
+  function getFileIconFA(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    const map = { md:'fa-solid fa-file-lines', html:'fa-solid fa-globe', htm:'fa-solid fa-globe', txt:'fa-solid fa-file-alt', pdf:'fa-solid fa-file-pdf' };
+    const cls = map[ext] || 'fa-solid fa-file';
+    const col = ext === 'md' ? '#5e9cf7' : ext === 'html' ? '#f7a25e' : '#888';
+    return `<i class="t-fa ${cls}" style="color:${col}"></i>`;
+  }
+
+  function renderSidebar(nodes, container, depth) {
+    depth = depth || 0;
     nodes.forEach(node => {
       if (node.type === 'dir') {
         const wrap = document.createElement('div');
         wrap.className = 't-folder';
         const row = document.createElement('div');
         row.className = 't-item';
-        row.innerHTML = '<span class="arr">▶</span><span>📂</span><span class="lbl">' + node.name + '</span>';
+        const icon = depth === 0 ? getPlatformIcon(node.name) : `<i class="t-fa fa-solid fa-folder" style="color:#7c6af7"></i>`;
+        row.innerHTML = `<span class="arr">▶</span>${icon}<span class="lbl">${node.name}</span>`;
         row.onclick = () => {
           wrap.classList.toggle('open');
-          const folderPath = getPathToDir(fileTree, node.name, node.children);
-          openFolder(node.name, node.children, folderPath || []);
+          const fp = getPathToDir(fileTree, node.name, node.children);
+          openFolder(node.name, node.children, fp || []);
         };
         const ch = document.createElement('div');
         ch.className = 't-children';
-        renderSidebar(node.children, ch);
+        renderSidebar(node.children, ch, depth + 1);
         wrap.appendChild(row); wrap.appendChild(ch);
         container.appendChild(wrap);
       } else {
         const item = document.createElement('div');
         item.className = 't-item';
         item.dataset.path = node.path;
-        item.innerHTML = '<span>' + getIcon(node.name) + '</span><span class="lbl" title="' + node.name + '">' + node.name + '</span>';
+        item.innerHTML = getFileIconFA(node.name) + `<span class="lbl" title="${node.name}">${node.name}</span>`;
         item.onclick = () => { setActive(item); openFile(node); };
         container.appendChild(item);
       }
@@ -214,31 +254,40 @@
     if (el) el.classList.add('active');
   }
 
-  // ── 文件夹视图 ────────────────────────────────────────────
+  // ── 文件夹视图 ──
   function openFolder(name, nodes, pathArr) {
     pathStack = pathArr.concat([{ name, nodes }]);
     renderBreadcrumb();
     showPanel('folder');
-    document.getElementById('fv-title').textContent = '📂 ' + name;
+    const p = PLATFORM_ICONS[name];
+    document.getElementById('fv-icon-big').innerHTML = p
+      ? `<i class="fa-solid ${p.fa.split(' ')[1] || p.fa}" style="color:${p.color};font-size:2rem"></i>`
+      : `<i class="fa-solid fa-folder-open" style="color:#7c6af7;font-size:2rem"></i>`;
+    document.getElementById('fv-title').textContent = name === '主页' ? '所有平台' : name;
+    document.getElementById('fv-subtitle').textContent = nodes.filter(n=>n.type==='dir').length + ' 个文件夹  ' + nodes.filter(n=>n.type==='file').length + ' 个文件';
     const grid = document.getElementById('fv-grid');
     grid.innerHTML = '';
-    // 文件夹优先
     const dirs  = nodes.filter(n => n.type === 'dir');
     const files = nodes.filter(n => n.type === 'file');
     [...dirs, ...files].forEach(node => {
       const row = document.createElement('div');
       row.className = 'fv-row';
       const isDir = node.type === 'dir';
-      row.innerHTML = '<span class="fv-icon">' + (isDir ? '📂' : getIcon(node.name)) + '</span>'
-        + '<span class="fv-name">' + node.name + '</span>'
-        + '<span class="fv-type">' + (isDir ? '文件夹' : node.name.split('.').pop().toUpperCase()) + '</span>';
+      const ext = isDir ? '' : node.name.split('.').pop().toLowerCase();
+      const iconClass = isDir ? 'dir' : (ext === 'md' ? 'md' : 'file');
+      const pp = PLATFORM_ICONS[node.name];
+      const iconHTML = isDir
+        ? (pp ? `<i class="${pp.fa}" style="color:${pp.color}"></i>` : `<i class="fa-solid fa-folder"></i>`)
+        : (ext === 'md' ? `<i class="fa-solid fa-file-lines"></i>` : `<i class="fa-solid fa-globe"></i>`);
+      row.innerHTML = `<div class="fv-icon ${iconClass}">${iconHTML}</div>`
+        + `<span class="fv-name">${node.name}</span>`
+        + `<span class="fv-badge">${isDir ? '文件夹' : ext.toUpperCase()}</span>`;
       row.onclick = () => {
         if (isDir) {
-          // 用精确路径定位该文件夹在树中的位置，避免 pathStack 叠加错误
-          const folderPath = getPathToDir(fileTree, node.name, node.children);
-          openFolder(node.name, node.children, folderPath);
+          const fp = getPathToDir(fileTree, node.name, node.children);
+          openFolder(node.name, node.children, fp);
         } else {
-          const el = document.querySelector('.t-item[data-path="' + node.path + '"]');
+          const el = document.querySelector(`.t-item[data-path="${node.path}"]`);
           setActive(el);
           openFile(node);
         }
@@ -247,17 +296,16 @@
     });
   }
 
-  // ── 文件视图 ──────────────────────────────────────────────
+  // ── 文件视图 ──
   async function openFile(node) {
-    // 用 node.path 精确定位路径，避免同名文件匹配错误
     pathStack = getPathByFilePath(fileTree, node.path) || [];
     renderBreadcrumb(node.name);
     showPanel('loading');
     try {
       const enc = await (await fetch('./encrypted/' + node.path)).text();
-      if (!enc || enc.startsWith('<!')) throw new Error('文件未找到或返回了HTML页面');
+      if (!enc || enc.startsWith('<!')) throw new Error('文件未找到');
       const dec = CryptoJS.AES.decrypt(enc.trim(), PASSWORD).toString(CryptoJS.enc.Utf8);
-      if (!dec) throw new Error('解密结果为空，密码可能有误或文件损坏');
+      if (!dec) throw new Error('解密结果为空');
       const ext = node.name.split('.').pop().toLowerCase();
       if (['html','htm'].includes(ext)) {
         showPanel('iframe');
@@ -271,49 +319,43 @@
       }
     } catch(e) {
       showPanel('md');
-      document.getElementById('md-body').innerHTML = '<p style="color:#f77">解密失败: ' + e.message + '</p>';
+      document.getElementById('md-body').innerHTML = `<p style="color:#f77"><i class="fa-solid fa-triangle-exclamation"></i> 解密失败: ${e.message}</p>`;
     }
   }
 
-  // ── 面包屑 ────────────────────────────────────────────────
+  // ── 面包屑 ──
   function renderBreadcrumb(currentFile) {
     const bc = document.getElementById('breadcrumb');
     bc.innerHTML = '';
-    // 主页
     const home = document.createElement('span');
     home.className = 'bc-item';
-    home.textContent = '🏠 主页';
-    home.onclick = () => {
-      const idx = findNodeByName(fileTree, 'index.html');
-      if (idx) { setActive(null); openFile(idx); }
-      else openFolder('主页', fileTree, []);
-    };
+    home.innerHTML = '<i class="fa-solid fa-house"></i> 主页';
+    home.onclick = () => openFolder('主页', fileTree, []);
     bc.appendChild(home);
-
     pathStack.forEach((seg, i) => {
       const sep = document.createElement('span');
-      sep.className = 'bc-sep'; sep.textContent = ' / ';
+      sep.className = 'bc-sep'; sep.textContent = '/';
       bc.appendChild(sep);
       const isLast = i === pathStack.length - 1 && !currentFile;
       const el = document.createElement('span');
       el.className = isLast ? 'bc-current' : 'bc-item';
-      el.textContent = seg.name;
+      const p = PLATFORM_ICONS[seg.name];
+      el.innerHTML = (p ? `<i class="${p.fa}" style="color:${p.color}"></i> ` : '') + seg.name;
       if (!isLast) el.onclick = () => openFolder(seg.name, seg.nodes, pathStack.slice(0, i));
       bc.appendChild(el);
     });
-
     if (currentFile) {
       const sep = document.createElement('span');
-      sep.className = 'bc-sep'; sep.textContent = ' / ';
+      sep.className = 'bc-sep'; sep.textContent = '/';
       bc.appendChild(sep);
       const el = document.createElement('span');
       el.className = 'bc-current';
-      el.textContent = currentFile;
+      el.innerHTML = `<i class="fa-solid fa-file-lines" style="color:#5e9cf7"></i> ${currentFile}`;
       bc.appendChild(el);
     }
   }
 
-  // ── 工具函数 ──────────────────────────────────────────────
+  // ── 工具 ──
   function showPanel(type) {
     document.getElementById('placeholder').style.display  = 'none';
     document.getElementById('loading').style.display      = type === 'loading' ? 'block' : 'none';
@@ -331,19 +373,6 @@
     return null;
   }
 
-  function getPathTo(nodes, targetName, stack) {
-    stack = stack || [];
-    for (const n of nodes) {
-      if (n.type === 'file' && n.name === targetName) return stack;
-      if (n.type === 'dir') {
-        const res = getPathTo(n.children, targetName, stack.concat([{name: n.name, nodes: n.children}]));
-        if (res) return res;
-      }
-    }
-    return null;
-  }
-
-  // 用完整 path 精确匹配，解决同名文件路径错误问题
   function getPathByFilePath(nodes, filePath, stack) {
     stack = stack || [];
     for (const n of nodes) {
@@ -356,7 +385,6 @@
     return null;
   }
 
-  // 通过文件夹的 children 引用精确定位文件夹路径（避免同名文件夹混淆）
   function getPathToDir(nodes, dirName, dirChildren, stack) {
     stack = stack || [];
     for (const n of nodes) {
@@ -369,13 +397,8 @@
     return null;
   }
 
-  function getIcon(name) {
-    const ext = name.split('.').pop().toLowerCase();
-    return {html:'🌐',htm:'🌐',md:'📝',txt:'📄',js:'📜',css:'🎨',json:'📋',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',svg:'🖼️',pdf:'📕'}[ext] || '📄';
-  }
-
   function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');
   }
 
   function renderMd(src) {
@@ -383,7 +406,6 @@
     return marked.parse(src, { gfm: true, breaks: false });
   }
 
-  // 供 index.html iframe 内调用
   window.appNav = function(target) {
     if (target.startsWith('folder:')) {
       const name = target.slice(7);
@@ -397,4 +419,3 @@
 </script>
 </body>
 </html>
-
