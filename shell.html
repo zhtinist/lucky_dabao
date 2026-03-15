@@ -339,13 +339,14 @@
     document.getElementById('regex-btn').classList.toggle('active', useRegex);
   }
 
-  // 递归收集当前文件夹及子文件夹所有文件
+  // 递归收集当前文件夹及子文件夹所有文件和文件夹
   function collectFiles(nodes, pathPrefix) {
     let results = [];
     for (const n of nodes) {
       if (n.type === 'file') {
-        results.push({ node: n, location: pathPrefix });
+        results.push({ node: n, location: pathPrefix, isDir: false });
       } else if (n.type === 'dir') {
+        results.push({ node: n, location: pathPrefix, isDir: true });
         results = results.concat(collectFiles(n.children, pathPrefix ? pathPrefix + ' / ' + n.name : n.name));
       }
     }
@@ -377,13 +378,22 @@
     sv.innerHTML = `<div class="sv-header">在 <span>${pathStack[pathStack.length-1]?.name || '主页'}</span> 中找到 <span>${hits.length}</span> 个结果</div>`;
     if (!hits.length) { sv.innerHTML += `<div class="sv-empty">没有匹配的文件</div>`; return; }
 
-    hits.forEach(({ node, location }) => {
+    hits.forEach(({ node, location, isDir }) => {
       const row = document.createElement('div');
       row.className = 'sv-item';
-      row.innerHTML = `<i class="sv-icon fa-solid fa-file-lines"></i>`
+      const icon = isDir ? 'fa-folder' : 'fa-file-lines';
+      const col  = isDir ? '#7c6af7' : '#5e9cf7';
+      row.innerHTML = `<i class="sv-icon fa-solid ${icon}" style="color:${col}"></i>`
         + `<span class="sv-name">${node.name}</span>`
         + `<span class="sv-path">${location || '当前目录'}</span>`;
-      row.onclick = () => { setActive(null); openFile(node); };
+      row.onclick = () => {
+        if (isDir) {
+          const fp = getPathToDir(fileTree, node.name, node.children);
+          openFolder(node.name, node.children, fp || []);
+        } else {
+          setActive(null); openFile(node);
+        }
+      };
       sv.appendChild(row);
     });
   }
