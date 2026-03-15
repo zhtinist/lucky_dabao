@@ -237,7 +237,8 @@
 
   // ── 文件视图 ──────────────────────────────────────────────
   async function openFile(node) {
-    pathStack = getPathTo(fileTree, node.name);
+    // 用 node.path 精确定位路径，避免同名文件匹配错误
+    pathStack = getPathByFilePath(fileTree, node.path);
     renderBreadcrumb(node.name);
     showPanel('loading');
     try {
@@ -328,6 +329,19 @@
     return null;
   }
 
+  // 用完整 path 精确匹配，解决同名文件路径错误问题
+  function getPathByFilePath(nodes, filePath, stack) {
+    stack = stack || [];
+    for (const n of nodes) {
+      if (n.type === 'file' && n.path === filePath) return stack;
+      if (n.type === 'dir') {
+        const res = getPathByFilePath(n.children, filePath, stack.concat([{name: n.name, nodes: n.children}]));
+        if (res) return res;
+      }
+    }
+    return [];
+  }
+
   function getIcon(name) {
     const ext = name.split('.').pop().toLowerCase();
     return {html:'🌐',htm:'🌐',md:'📝',txt:'📄',js:'📜',css:'🎨',json:'📋',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',svg:'🖼️',pdf:'📕'}[ext] || '📄';
@@ -338,16 +352,19 @@
   }
 
   function renderMd(src) {
-    let h = src.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    // 表格
+    // 先提取表格（用原始文本处理，避免转义干扰）
     const tableBlocks = [];
-    h = h.replace(/(^\|.+\|\n)+/gm, block => {
-      const rows = block.trim().split('\n').filter(r => !/^\|[-| :]+\|$/.test(r));
-      const toRow = (r, tag) => '<tr>' + r.split('|').slice(1,-1).map(c => '<' + tag + '>' + c.trim() + '</' + tag + '>').join('') + '</tr>';
-      const html = '<table><thead>' + toRow(rows[0],'th') + '</thead><tbody>' + rows.slice(1).map(r => toRow(r,'td')).join('') + '</tbody></table>';
+    src = src.replace(/(^\|.+\|\n?(^\|[-| :]+\|\n?)?(^\|.+\|\n?)*)/gm, block => {
+      const lines = block.trim().split('\n');
+      const dataLines = lines.filter(r => !/^\|[\s\-|:]+\|$/.test(r));
+      if (dataLines.length < 1) return block;
+      const toRow = (r, tag) => '<tr>' + r.split('|').slice(1,-1).map(c => '<' + tag + '>' + escHtml(c.trim()) + '</' + tag + '>').join('') + '</tr>';
+      const html = '<table><thead>' + toRow(dataLines[0],'th') + '</thead><tbody>' + dataLines.slice(1).map(r => toRow(r,'td')).join('') + '</tbody></table>';
       tableBlocks.push(html);
       return '%%TABLE' + (tableBlocks.length-1) + '%%\n';
     });
+
+    let h = escHtml(src);
     h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
     h = h.replace(/^### (.+)$/gm,'<h3>$1</h3>');
     h = h.replace(/^## (.+)$/gm,'<h2>$1</h2>');
