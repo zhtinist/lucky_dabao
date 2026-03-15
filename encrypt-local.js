@@ -14,7 +14,18 @@ const outputDir  = './encrypted';
 
 async function getPassword() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise(resolve => rl.question('请输入加密密码: ', ans => { rl.close(); resolve(ans.trim()); }));
+  return new Promise(resolve => rl.question('请输入加密密码 (回车读取 website_key.txt): ', ans => {
+    rl.close();
+    if (ans.trim()) { resolve(ans.trim()); return; }
+    // 回车留空，读取 ../website_key.txt
+    const keyFile = path.resolve(__dirname, '../website_key.txt');
+    if (fs.existsSync(keyFile)) {
+      const pwd = fs.readFileSync(keyFile, 'utf8').trim();
+      if (pwd) { console.log('✓ 已从 website_key.txt 读取密码'); resolve(pwd); return; }
+    }
+    console.error('website_key.txt 不存在或为空');
+    resolve('');
+  }));
 }
 
 function encryptDir(dir, baseDir, password) {
