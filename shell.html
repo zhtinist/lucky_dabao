@@ -153,7 +153,12 @@
   <div id="breadcrumb">
     <button id="menu-btn" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
     <span id="bc-content" style="flex:1;display:flex;align-items:center;gap:2px;overflow-x:auto;"></span>
-    <div style="display:flex;gap:.3rem;flex-shrink:0;margin-left:.5rem;">
+    <div style="display:flex;gap:.3rem;flex-shrink:0;margin-left:.5rem;align-items:center;">
+      <div style="position:relative;">
+        <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#444;font-size:.8rem;pointer-events:none;"></i>
+        <input id="search-input" placeholder="搜索..." oninput="onSearch()" style="background:#1e1e3a;border:1px solid #2a2a4a;border-radius:6px;color:#ccc;padding:3px 8px 3px 26px;font-size:.85rem;width:8rem;outline:none;">
+      </div>
+      <button class="font-btn" id="sort-btn" onclick="toggleSort()" title="排序">⇅ 名称</button>
       <button class="font-btn" onclick="adjustFont(-1)" title="缩小字体">A-</button>
       <button class="font-btn" onclick="adjustFont(1)"  title="放大字体">A+</button>
     </div>
@@ -206,6 +211,15 @@
   function adjustFont(dir) {
     const cur = parseFloat(document.documentElement.style.fontSize) || 18;
     document.documentElement.style.fontSize = Math.min(Math.max(cur + dir * 4, 14), 80) + 'px';
+  }
+
+  function goBack() {
+    if (pathStack.length <= 1) {
+      openFolder('主页', fileTree, []);
+    } else {
+      const parent = pathStack[pathStack.length - 2];
+      openFolder(parent.name, parent.nodes, pathStack.slice(0, pathStack.length - 2));
+    }
   }
 
   function toggleSidebar() {
@@ -297,29 +311,52 @@
     });
   }
 
-  let activeItem = null;
-  function setActive(el) {
-    if (activeItem) activeItem.classList.remove('active');
-    activeItem = el;
-    if (el) el.classList.add('active');
+  let currentFolderNodes = [];
+  let sortMode = 'default'; // default | name-asc | name-desc | type
+
+  function onSearch() {
+    renderFolderGrid(currentFolderNodes);
   }
 
-  // ── 文件夹视图 ──
-  function openFolder(name, nodes, pathArr) {
-    pathStack = pathArr.concat([{ name, nodes }]);
-    renderBreadcrumb();
-    showPanel('folder');
-    const p = PLATFORM_ICONS[name];
-    document.getElementById('fv-icon-big').innerHTML = p
-      ? `<i class="fa-solid ${p.fa.split(' ')[1] || p.fa}" style="color:${p.color};font-size:2rem"></i>`
-      : `<i class="fa-solid fa-folder-open" style="color:#7c6af7;font-size:2rem"></i>`;
-    document.getElementById('fv-title').textContent = name === '主页' ? '所有平台' : name;
-    document.getElementById('fv-subtitle').textContent = nodes.filter(n=>n.type==='dir').length + ' 个文件夹  ' + nodes.filter(n=>n.type==='file').length + ' 个文件';
+  function toggleSort() {
+    const modes = ['default','name-asc','name-desc','type'];
+    const labels = ['⇅ 默认','↑ 名称','↓ 名称','⇅ 类型'];
+    sortMode = modes[(modes.indexOf(sortMode) + 1) % modes.length];
+    document.getElementById('sort-btn').textContent = labels[modes.indexOf(sortMode)];
+    renderFolderGrid(currentFolderNodes);
+  }
+
+  function getSortedFiltered(nodes) {
+    const q = (document.getElementById('search-input').value || '').trim().toLowerCase();
+    let list = q ? nodes.filter(n => n.name.toLowerCase().includes(q)) : [...nodes];
+    if (sortMode === 'name-asc')  list.sort((a,b) => a.name.localeCompare(b.name));
+    if (sortMode === 'name-desc') list.sort((a,b) => b.name.localeCompare(a.name));
+    if (sortMode === 'type') list.sort((a,b) => {
+      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    if (sortMode === 'default') list.sort((a,b) => {
+      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+      return 0;
+    });
+    return list;
+  }
+
+  function renderFolderGrid(nodes) {
     const grid = document.getElementById('fv-grid');
     grid.innerHTML = '';
-    const dirs  = nodes.filter(n => n.type === 'dir');
-    const files = nodes.filter(n => n.type === 'file');
-    [...dirs, ...files].forEach(node => {
+
+    // 返回上一级卡片（主页时不显示）
+    if (pathStack.length > 1) {
+      const back = document.createElement('div');
+      back.className = 'fv-row';
+      back.innerHTML = `<div class="fv-icon dir"><i class="fa-solid fa-arrow-left"></i></div><span class="fv-name">返回上一级</span><span class="fv-badge">返回</span>`;
+      back.onclick = () => goBack();
+      grid.appendChild(back);
+    }
+
+    const list = getSortedFiltered(nodes);
+    list.forEach(node => {
       const row = document.createElement('div');
       row.className = 'fv-row';
       const isDir = node.type === 'dir';
@@ -338,12 +375,33 @@
           openFolder(node.name, node.children, fp);
         } else {
           const el = document.querySelector(`.t-item[data-path="${node.path}"]`);
-          setActive(el);
-          openFile(node);
+          setActive(el); openFile(node);
         }
       };
       grid.appendChild(row);
     });
+  }
+  let activeItem = null;
+  function setActive(el) {
+    if (activeItem) activeItem.classList.remove('active');
+    activeItem = el;
+    if (el) el.classList.add('active');
+  }
+
+  // ── 文件夹视图 ──
+  function openFolder(name, nodes, pathArr) {
+    pathStack = pathArr.concat([{ name, nodes }]);
+    renderBreadcrumb();
+    showPanel('folder');
+    const p = PLATFORM_ICONS[name];
+    document.getElementById('fv-icon-big').innerHTML = p
+      ? `<i class="fa-solid ${p.fa.split(' ')[1] || p.fa}" style="color:${p.color};font-size:2rem"></i>`
+      : `<i class="fa-solid fa-folder-open" style="color:#7c6af7;font-size:2rem"></i>`;
+    document.getElementById('fv-title').textContent = name === '主页' ? '所有平台' : name;
+    document.getElementById('fv-subtitle').textContent = nodes.filter(n=>n.type==='dir').length + ' 个文件夹  ' + nodes.filter(n=>n.type==='file').length + ' 个文件';
+    currentFolderNodes = nodes;
+    document.getElementById('search-input').value = '';
+    renderFolderGrid(nodes);
   }
 
   // ── 文件视图 ──

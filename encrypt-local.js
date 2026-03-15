@@ -34,8 +34,17 @@ function encryptDir(dir, baseDir, password) {
   });
 }
 
+const DIR_ORDER = ['腾讯','YouTube','抖音','Bilibili','快手','小红书'];
+
 function buildTree(dir, baseDir) {
-  return fs.readdirSync(dir).sort().map(name => {
+  const entries = fs.readdirSync(dir).sort((a, b) => {
+    const ai = DIR_ORDER.indexOf(a), bi = DIR_ORDER.indexOf(b);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return a.localeCompare(b);
+  });
+  return entries.map(name => {
     const full = path.join(dir, name);
     const rel  = path.relative(baseDir, full);
     if (fs.statSync(full).isDirectory()) {
