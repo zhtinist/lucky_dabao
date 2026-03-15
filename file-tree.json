@@ -72,6 +72,11 @@
             "type": "file",
             "name": "投放指南.md",
             "path": "YouTube/大宝见/投放指南.md.enc"
+          },
+          {
+            "type": "file",
+            "name": "YouTube新号运营完全指南.md",
+            "path": "YouTube/大宝见/YouTube新号运营完全指南.md.enc"
           }
         ]
       },
@@ -94,6 +99,11 @@
             "type": "file",
             "name": "投放指南.md",
             "path": "YouTube/秦刚/投放指南.md.enc"
+          },
+          {
+            "type": "file",
+            "name": "YouTube新号运营完全指南.md",
+            "path": "YouTube/秦刚/YouTube新号运营完全指南.md.enc"
           }
         ]
       }
@@ -108,6 +118,11 @@
         "name": "大宝见",
         "children": [
           {
+            "type": "file",
+            "name": "大宝见666_冲10万粉指南.md",
+            "path": "抖音/大宝见/大宝见666_冲10万粉指南.md.enc"
+          },
+          {
             "type": "dir",
             "name": "数据记录",
             "children": [
@@ -117,11 +132,6 @@
                 "path": "抖音/大宝见/数据记录/2026.md.enc"
               }
             ]
-          },
-          {
-            "type": "file",
-            "name": "投放指南.md",
-            "path": "抖音/大宝见/投放指南.md.enc"
           }
         ]
       },
@@ -129,6 +139,11 @@
         "type": "dir",
         "name": "秦刚",
         "children": [
+          {
+            "type": "file",
+            "name": "秦刚_冲10万粉指南.md",
+            "path": "抖音/秦刚/秦刚_冲10万粉指南.md.enc"
+          },
           {
             "type": "dir",
             "name": "数据记录",
@@ -139,11 +154,6 @@
                 "path": "抖音/秦刚/数据记录/2026.md.enc"
               }
             ]
-          },
-          {
-            "type": "file",
-            "name": "投放指南.md",
-            "path": "抖音/秦刚/投放指南.md.enc"
           }
         ]
       }
