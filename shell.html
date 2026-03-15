@@ -255,7 +255,8 @@
     showPanel('loading');
     try {
       const enc = await (await fetch('./encrypted/' + node.path)).text();
-      const dec = CryptoJS.AES.decrypt(enc, PASSWORD).toString(CryptoJS.enc.Utf8);
+      if (!enc || enc.startsWith('<!')) throw new Error('文件未找到或返回了HTML页面');
+      const dec = CryptoJS.AES.decrypt(enc.trim(), PASSWORD).toString(CryptoJS.enc.Utf8);
       if (!dec) throw new Error('解密结果为空，密码可能有误或文件损坏');
       const ext = node.name.split('.').pop().toLowerCase();
       if (['html','htm'].includes(ext)) {
