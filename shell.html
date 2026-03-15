@@ -347,7 +347,7 @@
     grid.innerHTML = '';
 
     // 返回上一级卡片（主页时不显示）
-    if (pathStack.length > 1) {
+    if (pathStack.length >= 1) {
       const back = document.createElement('div');
       back.className = 'fv-row';
       back.innerHTML = `<div class="fv-icon dir"><i class="fa-solid fa-arrow-left"></i></div><span class="fv-name">返回上一级</span><span class="fv-badge">返回</span>`;
